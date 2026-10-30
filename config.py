@@ -1,72 +1,89 @@
 
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load .env for local development.
+# Vercel production settings come from environment variables.
+basedir = Path(__file__).resolve().parent
+load_dotenv(basedir / ".env")
 
-basedir = os.path.abspath(os.path.dirname(__file__))
+IS_VERCEL = os.environ.get("VERCEL") == "1"
+IS_PRODUCTION = (
+    IS_VERCEL
+    or os.environ.get("FLASK_ENV") == "production"
+    or os.environ.get("APP_ENV") == "production"
+)
 
-# Read database URL from the environment.
-database_url = os.environ.get("DATABASE_URL")
+# Database configuration
+database_url = os.environ.get("DATABASE_URL", "").strip()
 
-# Support PostgreSQL URLs supplied with the older postgres:// prefix.
-if database_url and database_url.startswith("postgres://"):
+# Support older PostgreSQL URL prefixes.
+if database_url.startswith("postgres://"):
     database_url = database_url.replace(
         "postgres://", "postgresql://", 1
     )
 
+# Do not silently use SQLite in production.
+if IS_PRODUCTION and not database_url:
+    raise RuntimeError(
+        "DATABASE_URL must be configured in production."
+    )
+
+# Require a strong secret in production.
+secret_key = os.environ.get("SECRET_KEY")
+
+if IS_PRODUCTION and not secret_key:
+    raise RuntimeError(
+        "SECRET_KEY must be configured in production."
+    )
+
+if not IS_PRODUCTION and not secret_key:
+    secret_key = "local-development-only-change-this-secret"
+
 
 class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY")
+    SECRET_KEY = secret_key
 
-    if not SECRET_KEY:
-        SECRET_KEY = (
-            "local-development-only-change-this-secret"
-        )
-
-    # Use the hosted PostgreSQL URL in production.
     SQLALCHEMY_DATABASE_URI = database_url or (
-        "sqlite:///" + os.path.join(basedir, "instance", "app.db")
+        "sqlite:///" + str(basedir / "instance" / "app.db")
     )
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,
         "pool_recycle": 300,
     }
 
-    # Local folders; these are not persistent on Vercel.
-    UPLOAD_FOLDER = os.path.join(basedir, "uploads")
-    DOCUMENTS_FOLDER = os.path.join(
-        UPLOAD_FOLDER, "documents"
+    # Local paths only. Use persistent object storage in production.
+    UPLOAD_FOLDER = str(basedir / "uploads")
+    DOCUMENTS_FOLDER = str(
+        basedir / "uploads" / "documents"
     )
-    RECEIPTS_FOLDER = os.path.join(
-        UPLOAD_FOLDER, "receipts"
+    RECEIPTS_FOLDER = str(
+        basedir / "uploads" / "receipts"
     )
 
-    # Vercel has a 4.5 MB request payload limit.
-    # Use a lower limit to leave room for multipart overhead.
+    # Keep request sizes below Vercel's 4.5 MB request limit.
     MAX_CONTENT_LENGTH = (
-        4 * 1024 * 1024
-        if os.environ.get("VERCEL")
+        4 * 1024 * 1024 if IS_VERCEL
         else 16 * 1024 * 1024
     )
 
     ALLOWED_EXTENSIONS = {"pdf", "jpg", "jpeg", "png"}
 
-    # Set this in your local .env if Tesseract is installed.
-    # Vercel will need a compatible Linux Tesseract binary
-    # and its trained-data files for image OCR to work.
+    # Configure a valid executable path if Tesseract is installed.
     TESSERACT_CMD = os.environ.get(
         "TESSERACT_CMD", "tesseract"
     )
 
+    # Session and cookie security
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
-    SESSION_COOKIE_SECURE = (
-        os.environ.get("VERCEL") == "1"
-    )
+    SESSION_COOKIE_SECURE = IS_PRODUCTION
 
+    # Enable CSRF protection for form submissions.
     WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = None
 
@@ -76,11 +93,11 @@ class TestConfig(Config):
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     WTF_CSRF_ENABLED = False
 
-    UPLOAD_FOLDER = os.path.join(basedir, "test_uploads")
-    DOCUMENTS_FOLDER = os.path.join(
-        UPLOAD_FOLDER, "documents"
+    UPLOAD_FOLDER = str(basedir / "test_uploads")
+    DOCUMENTS_FOLDER = str(
+        basedir / "test_uploads" / "documents"
     )
-    RECEIPTS_FOLDER = os.path.join(
-        UPLOAD_FOLDER, "receipts"
+    RECEIPTS_FOLDER = str(
+        basedir / "test_uploads" / "receipts"
     )
     SERVER_NAME = "localhost.localdomain"
