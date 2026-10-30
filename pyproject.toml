@@ -1,2 +1,2 @@
 [tool.vercel]
-entrypoint = "index:app"
+entrypoint = "app:app"
