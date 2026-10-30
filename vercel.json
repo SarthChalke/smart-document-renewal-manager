@@ -1,10 +1,10 @@
-
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "services": {
     "app": {
       "root": ".",
-      "framework": "flask"
+      "framework": "flask",
+      "entrypoint": "run:app"
     },
     "backup_pre_upgrade": {
       "root": "backup_pre_upgrade",
