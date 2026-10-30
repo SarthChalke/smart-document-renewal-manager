@@ -1,29 +1,22 @@
-# Python
+
+.env
+.env.*
+!.env.example
+
+.venv/
+venv/
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.venv/
-env/
-venv/
-ENV/
 
-# Database
-instance/*.db
-*.sqlite3
+instance/
+uploads/
+test_uploads/
+backup_pre_upgrade/
 
-# Uploads
-uploads/documents/*
-!uploads/documents/.gitkeep
-uploads/receipts/*
-!uploads/receipts/.gitkeep
+cert.pem
+key.pem
+.pytest_cache/
+.coverage
 
-# Environment
-.env
-.env.local
-
-# IDE
-.vscode/
-.idea/
-*.sublime-project
-*.sublime-workspace
+.DS_Store
+Thumbs.db
