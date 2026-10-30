@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Create Account — Smart Document & Financial Manager{% endblock %}
+
+{% block auth_content %}
+<div class="card border-0 shadow-lg" style="border-radius: 16px;">
+    <div class="card-body p-4 p-sm-5">
+        <div class="text-center mb-4">
+            <div class="d-inline-flex p-3 rounded-circle mb-3" style="background-color: #ECE8FF;">
+                <i class="bi bi-person-plus-fill fs-1" style="color: #6C3BFF;"></i>
+            </div>
+            <h3 class="fw-bold mb-1" style="color: #6C3BFF;">Create Account</h3>
+            <p class="text-muted small">Register to track documents and manage loans</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('register') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Full Name <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="bi bi-person-vcard"></i></span>
+                    <input type="text" name="full_name" class="form-control" placeholder="e.g. Rahul Sharma" required>
+                </div>
+            </div>
+
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold">Username <span class="text-danger">*</span></label>
+                    <input type="text" name="username" class="form-control" placeholder="Username" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold">Phone Number</label>
+                    <input type="tel" name="phone" class="form-control" placeholder="e.g. 9876543210">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Email Address <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="bi bi-envelope"></i></span>
+                    <input type="email" name="email" class="form-control" placeholder="name@example.com" required>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Password <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="bi bi-lock"></i></span>
+                    <input type="password" name="password" class="form-control" placeholder="Min. 6 characters" minlength="6" required>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label small fw-bold">Confirm Password <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="bi bi-shield-lock"></i></span>
+                    <input type="password" name="confirm_password" class="form-control" placeholder="Repeat password" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-purple w-100 py-2 fw-bold shadow-sm" style="border-radius: 8px;">
+                <i class="bi bi-check2-circle me-1"></i> Register Account
+            </button>
+        </form>
+
+        <div class="text-center mt-4 pt-3 border-top">
+            <span class="text-muted small">Already have an account?</span>
+            <a href="{{ url_for('login') }}" class="small fw-bold ms-1 text-decoration-none" style="color: #6C3BFF;">Sign In</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

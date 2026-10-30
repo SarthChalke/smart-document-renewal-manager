@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Document Renewals — Smart Document & Financial Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: #6C3BFF;">
+            <i class="bi bi-arrow-repeat me-2" style="color: #2878FF;"></i> Document Renewals
+        </h2>
+        <p class="text-muted small mb-0">Track pending renewal applications and update document expiry dates seamlessly.</p>
+    </div>
+    <a href="{{ url_for('documents_list') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-folder2-open me-1"></i> Back to Documents
+    </a>
+</div>
+
+<!-- Start Renewal Form (if triggered directly) -->
+{% if start_renewal and doc %}
+<div class="card-clean p-4 mb-4" style="border: 2px solid #6C3BFF;">
+    <h5 class="fw-bold mb-3" style="color: #6C3BFF;">
+        <i class="bi bi-arrow-repeat me-1"></i> Renew Document: {{ doc.title }}
+    </h5>
+    <form method="POST" action="{{ url_for('renew_document', id=doc.id) }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <label class="form-label small fw-bold">Application Date</label>
+                <input type="date" name="application_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-bold">Renewal Status</label>
+                <select name="status" class="form-select" required>
+                    {% for s_val, s_label in renewal_statuses %}
+                    <option value="{{ s_val }}" {% if s_val == 'Applied' %}selected{% endif %}>{{ s_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-bold">Expected Completion Date</label>
+                <input type="date" name="expected_completion_date" class="form-control">
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label class="form-label small fw-bold">Actual Renewal Date (If Completed)</label>
+                <input type="date" name="actual_renewal_date" class="form-control">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small fw-bold" style="color: #6C3BFF;">New Expiry Date (If Completed)</label>
+                <input type="date" name="new_expiry_date" class="form-control" style="border-color: #6C3BFF;">
+                <small class="text-muted">Setting a new expiry date automatically updates the main document.</small>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label small fw-bold">Upload Renewed Document File (Optional)</label>
+            <input type="file" name="renewed_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label small fw-bold">Renewal Notes / Reference</label>
+            <textarea name="notes" class="form-control" rows="2" placeholder="e.g. Application acknowledgment receipt #12345..."></textarea>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-purple"><i class="bi bi-check-lg me-1"></i> Save Renewal Record</button>
+            <a href="{{ url_for('document_details', id=doc.id) }}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<!-- Documents Expiring Soon or Expired -->
+<div class="card-clean mb-4">
+    <div class="card-header-clean">
+        <h5>Documents Requiring Attention</h5>
+        <span class="badge bg-light text-dark border">{{ documents|length }} total</span>
+    </div>
+    <div class="p-0">
+        {% if documents %}
+        <div class="table-responsive">
+            <table class="table table-clean mb-0">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Expiry Date</th>
+                        <th>Status</th>
+                        <th>Renewal State</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in documents %}
+                    <tr>
+                        <td class="fw-bold">{{ d.title }}</td>
+                        <td>{{ d.category_display }}</td>
+                        <td>{{ d.expiry_date.strftime('%d %b %Y') if d.expiry_date else 'Lifetime' }}</td>
+                        <td><span class="{{ d.status_badge_class }}">{{ d.status_display }}</span></td>
+                        <td><span class="badge bg-light text-dark border">{{ d.renewal_status }}</span></td>
+                        <td>
+                            <a href="{{ url_for('renew_document', id=d.id) }}" class="btn btn-sm btn-purple py-1 px-3">
+                                <i class="bi bi-arrow-repeat me-1"></i> Renew Now
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-4 text-center text-muted">
+            All your documents are valid and up-to-date!
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Past Renewal History Table -->
+<div class="card-clean">
+    <div class="card-header-clean">
+        <h5>All Renewal Records History</h5>
+    </div>
+    <div class="p-0">
+        {% if renewals %}
+        <div class="table-responsive">
+            <table class="table table-clean mb-0">
+                <thead>
+                    <tr>
+                        <th>Document</th>
+                        <th>Application Date</th>
+                        <th>Status</th>
+                        <th>Previous Expiry</th>
+                        <th>New Expiry</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in renewals %}
+                    <tr>
+                        <td class="fw-bold">
+                            <a href="{{ url_for('document_details', id=r.document_id) }}" class="text-decoration-none text-dark">
+                                {{ r.document.title }}
+                            </a>
+                        </td>
+                        <td>{{ r.application_date.strftime('%d %b %Y') }}</td>
+                        <td><span class="{{ r.status_badge_class }}">{{ r.status }}</span></td>
+                        <td>{{ r.previous_expiry_date.strftime('%d %b %Y') if r.previous_expiry_date else 'N/A' }}</td>
+                        <td class="fw-bold" style="color: #6C3BFF;">{{ r.new_expiry_date.strftime('%d %b %Y') if r.new_expiry_date else 'Pending' }}</td>
+                        <td><small class="text-muted">{{ r.notes or '—' }}</small></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-4 text-center text-muted">
+            No renewal history recorded yet.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

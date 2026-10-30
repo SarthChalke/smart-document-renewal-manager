@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}EMI Calculator — Smart Document & Financial Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: #6C3BFF;"><i class="bi bi-calculator me-2"></i> EMI Calculator</h2>
+        <p class="text-muted small mb-0">Calculate estimated monthly EMI, total interest, and total payable amount.</p>
+    </div>
+    <a href="{{ url_for('add_loan') }}" class="btn btn-purple shadow-sm">
+        <i class="bi bi-plus-circle me-1"></i> Register as a Loan
+    </a>
+</div>
+
+<div class="row g-4">
+    <!-- Input Form -->
+    <div class="col-lg-5">
+        <div class="card-clean p-4">
+            <h5 class="fw-bold mb-3" style="color: #20243A;">Loan Calculation Parameters</h5>
+            <form method="POST" action="{{ url_for('emi_calculator') }}" id="emiForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Loan Principal Amount (₹)</label>
+                    <input type="number" step="1000" name="principal" id="calcPrincipal" class="form-control form-control-lg fw-bold" value="{{ principal }}" min="1000" required>
+                    <input type="range" class="form-range mt-2" min="10000" max="10000000" step="10000" value="{{ principal }}"
+                           oninput="document.getElementById('calcPrincipal').value = this.value">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Annual Interest Rate (%)</label>
+                    <input type="number" step="0.1" name="interest_rate" id="calcRate" class="form-control fw-bold" value="{{ rate }}" min="0" max="50" required>
+                    <input type="range" class="form-range mt-2" min="0" max="30" step="0.25" value="{{ rate }}"
+                           oninput="document.getElementById('calcRate').value = this.value">
+                    <small class="text-muted">Set to 0% for zero-interest loans.</small>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold">Loan Tenure (Months)</label>
+                    <input type="number" name="tenure_months" id="calcTenure" class="form-control fw-bold" value="{{ tenure }}" min="1" max="360" required>
+                    <input type="range" class="form-range mt-2" min="1" max="360" step="1" value="{{ tenure }}"
+                           oninput="document.getElementById('calcTenure').value = this.value">
+                    <small class="text-muted" id="yearsDisplay">{{ (tenure / 12)|round(1) }} Year(s)</small>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary-custom w-100 py-2 fw-bold">
+                        <i class="bi bi-calculator me-1"></i> Calculate EMI
+                    </button>
+                    <a href="{{ url_for('emi_calculator') }}" class="btn btn-outline-secondary">Reset</a>
+                </div>
+            </form>
+        </div>
+
+        <div class="card-clean p-3 mt-3 bg-light">
+            <h6 class="fw-bold small mb-2"><i class="bi bi-info-circle text-primary me-1"></i> Formula Used</h6>
+            <code class="small d-block mb-1">EMI = P × R × (1 + R)^N / ((1 + R)^N - 1)</code>
+            <p class="small text-muted mb-0" style="font-size:0.75rem;">
+                Where <strong>P</strong> is Principal, <strong>R</strong> is Monthly Interest Rate, and <strong>N</strong> is Number of Months. Zero-interest loans use <code>P / N</code>.
+            </p>
+        </div>
+    </div>
+
+    <!-- Calculation Results -->
+    <div class="col-lg-7">
+        {% if result %}
+        <div class="card-clean p-4 h-100">
+            <h5 class="fw-bold mb-3" style="color: #6C3BFF;">Calculation Results (Estimate)</h5>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="p-3 bg-light rounded border text-center">
+                        <span class="text-muted small text-uppercase fw-bold d-block">Monthly EMI</span>
+                        <h2 class="fw-bold my-1" style="color: #6C3BFF;">₹ {{ "{:,.2f}".format(result.monthly_emi) }}</h2>
+                        <small class="text-muted">Per month installment</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 bg-light rounded border text-center">
+                        <span class="text-muted small text-uppercase fw-bold d-block">Total Interest Payable</span>
+                        <h2 class="fw-bold text-warning my-1">₹ {{ "{:,.2f}".format(result.total_interest) }}</h2>
+                        <small class="text-muted">Over full loan duration</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-between p-2 border-bottom">
+                        <span class="text-muted">Principal Amount:</span>
+                        <strong class="text-dark">₹ {{ "{:,.2f}".format(result.principal) }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between p-2 border-bottom">
+                        <span class="text-muted">Total Interest Amount:</span>
+                        <strong class="text-warning">₹ {{ "{:,.2f}".format(result.total_interest) }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between p-2 border-bottom">
+                        <span class="text-muted">Total Amount Payable:</span>
+                        <strong class="fs-6" style="color: #6C3BFF;">₹ {{ "{:,.2f}".format(result.total_payable) }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between p-2">
+                        <span class="text-muted">Loan Duration:</span>
+                        <strong>{{ tenure }} Months ({{ (tenure/12)|round(1) }} Years)</strong>
+                    </div>
+                </div>
+
+                <div class="col-md-6 d-flex align-items-center justify-content-center">
+                    <div style="width: 200px; height: 200px;">
+                        <canvas id="emiCalculatorChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-warning py-2 small mb-0">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                <strong>Disclaimer:</strong> This is a mathematical estimate using reducing-balance amortization. Actual bank terms, processing fees, taxes, and interest day-count conventions may slightly alter your lender's exact EMI.
+            </div>
+        </div>
+        {% else %}
+        <div class="card-clean p-5 text-center text-muted h-100 d-flex flex-column justify-content-center">
+            <i class="bi bi-calculator fs-1 mb-3" style="color: #6C3BFF;"></i>
+            <h5>Enter Parameters & Click Calculate</h5>
+            <p class="small">Adjust the principal, interest rate, and tenure sliders on the left to see the instant monthly EMI breakdown and chart.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+    {% if result %}
+    window.calculatorData = {
+        principal: {{ result.principal|float }},
+        interest: {{ result.total_interest|float }}
+    };
+    {% endif %}
+</script>
+{% endblock %}

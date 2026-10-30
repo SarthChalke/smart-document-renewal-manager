@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Settings & Preferences — Smart Document & Financial Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: #6C3BFF;"><i class="bi bi-gear-fill me-2" style="color: #2878FF;"></i> Settings & Preferences</h2>
+        <p class="text-muted small mb-0">Configure notification timing, reminder frequencies, and verify OCR system status.</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Reminder Preferences Form -->
+    <div class="col-lg-6">
+        <div class="card-clean p-4 h-100">
+            <h5 class="fw-bold mb-3" style="color: #6C3BFF;"><i class="bi bi-bell-gear me-2"></i> Reminder Schedules</h5>
+            <form method="POST" action="{{ url_for('settings') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Document Expiry Reminder Days</label>
+                    <input type="text" name="doc_days" class="form-control" value="{{ pref.doc_days_before }}" placeholder="30,14,7,1">
+                    <small class="text-muted">Comma-separated days before expiry when in-app alerts are emitted (e.g. 30, 14, 7, 1).</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">EMI Due Reminder Days</label>
+                    <input type="text" name="emi_days" class="form-control" value="{{ pref.emi_days_before }}" placeholder="7,3,1,0">
+                    <small class="text-muted">Days before installment due date to trigger notifications (0 = Due Today).</small>
+                </div>
+
+                <div class="form-check form-switch mb-4">
+                    <input class="form-check-input" type="checkbox" name="in_app_enabled" id="inAppToggle" {% if pref.in_app_enabled %}checked{% endif %}>
+                    <label class="form-check-label fw-bold small" for="inAppToggle">Enable In-App Notifications</label>
+                    <small class="text-muted d-block">When enabled, active notifications appear on topbar and notification center.</small>
+                </div>
+
+                <button type="submit" class="btn btn-purple px-4 fw-bold">
+                    <i class="bi bi-check-lg me-1"></i> Save Preferences
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- System Diagnostic & OCR Status -->
+    <div class="col-lg-6">
+        <div class="card-clean p-4 h-100">
+            <h5 class="fw-bold mb-3" style="color: #2878FF;"><i class="bi bi-cpu text-primary me-2"></i> OCR Engine Diagnostic</h5>
+
+            <div class="p-3 rounded border mb-3 bg-light" style="{% if tesseract_installed %}border-color: #6C3BFF !important;{% else %}border-color: #FFD166 !important;{% endif %}">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="fw-bold">Tesseract OCR Binary</span>
+                    {% if tesseract_installed %}
+                    <span class="badge" style="background: #22C7D6; color: #0F172A; font-weight: 700;"><i class="bi bi-check-circle me-1"></i> Installed & Active</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i> Not Detected</span>
+                    {% endif %}
+                </div>
+                <small class="text-muted d-block mb-1">Configured Path: <code>{{ tesseract_cmd }}</code></small>
+                {% if not tesseract_installed %}
+                <small class="text-danger d-block">
+                    Camera scanning works! You can preview photos and enter details manually. To enable automatic OCR text extraction, install Tesseract OCR on Windows.
+                </small>
+                {% endif %}
+            </div>
+
+            <h6 class="fw-bold small mb-2">How to Install Tesseract OCR on Windows:</h6>
+            <ol class="small text-muted ps-3 mb-3">
+                <li class="mb-1">Download the Windows installer from GitHub: <code>https://github.com/UB-Mannheim/tesseract/wiki</code></li>
+                <li class="mb-1">Install to the default path: <code>C:\Program Files\Tesseract-OCR\tesseract.exe</code></li>
+                <li class="mb-1">(Optional) Select Marathi / Hindi additional language packs during setup if scanning regional documents.</li>
+                <li class="mb-1">Restart your Flask terminal and this diagnostic badge will automatically turn active!</li>
+            </ol>
+
+            <div class="p-3 bg-light rounded border">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="small fw-bold">Current User Account</span>
+                    <span class="badge bg-light text-dark border">@{{ current_user.username }}</span>
+                </div>
+                <small class="text-muted d-block mt-1">{{ current_user.full_name }} · {{ current_user.email }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

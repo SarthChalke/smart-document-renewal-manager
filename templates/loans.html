@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Loans Management — Smart Document & Financial Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: #6C3BFF;">
+            <i class="bi bi-bank2 me-2" style="color: #2878FF;"></i> Loans Management
+        </h2>
+        <p class="text-muted small mb-0">Track all your personal, vehicle, education, and home loans in one place.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('emi_calculator') }}" class="btn btn-purple d-flex align-items-center gap-1 shadow-sm">
+            <i class="bi bi-calculator"></i> EMI Calculator
+        </a>
+        <a href="{{ url_for('add_loan') }}" class="btn btn-primary-custom d-flex align-items-center gap-1 shadow-sm">
+            <i class="bi bi-plus-circle"></i> Add New Loan
+        </a>
+    </div>
+</div>
+
+<!-- ─── SUMMARY CARDS ─── -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="stat-icon purple"><i class="bi bi-bank2"></i></div>
+            <div>
+                <h3 class="stat-value">{{ active_loans_count }}</h3>
+                <p class="stat-label">Active Loans</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="bi bi-cash-stack"></i></div>
+            <div>
+                <h3 class="stat-value" style="font-size:1.25rem; color: #2878FF;">₹ {{ "{:,.0f}".format(total_borrowed) }}</h3>
+                <p class="stat-label">Total Principal</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="stat-icon cyan"><i class="bi bi-check2-circle"></i></div>
+            <div>
+                <h3 class="stat-value" style="font-size:1.25rem; color: #0C7E8A;">₹ {{ "{:,.0f}".format(total_paid) }}</h3>
+                <p class="stat-label">Total Repaid</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="stat-icon orange"><i class="bi bi-pie-chart"></i></div>
+            <div>
+                <h3 class="stat-value text-warning" style="font-size:1.25rem;">₹ {{ "{:,.0f}".format(total_outstanding) }}</h3>
+                <p class="stat-label">Est. Outstanding</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Loan Form (Inline / Toggle) -->
+{% if show_add_form %}
+<div class="card-clean p-4 mb-4" style="border: 2px solid #6C3BFF;">
+    <h5 class="fw-bold mb-3" style="color: #6C3BFF;"><i class="bi bi-plus-circle-fill me-2"></i> Register New Loan</h5>
+    <form method="POST" action="{{ url_for('add_loan') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label class="form-label small fw-bold">Loan Name <span class="text-danger">*</span></label>
+                <input type="text" name="loan_name" class="form-control" placeholder="e.g. SBI Home Loan" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Loan Type <span class="text-danger">*</span></label>
+                <select name="loan_type" class="form-select" required>
+                    {% for lt_val, lt_label in loan_types %}
+                    <option value="{{ lt_val }}">{{ lt_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Bank / Lender Name <span class="text-danger">*</span></label>
+                <input type="text" name="lender_name" class="form-control" placeholder="e.g. State Bank of India" required>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Principal Amount (₹) <span class="text-danger">*</span></label>
+                <input type="number" step="0.01" name="principal_amount" id="loanPrincipal" class="form-control" placeholder="500000" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Annual Interest Rate (%)</label>
+                <input type="number" step="0.01" name="annual_interest_rate" id="loanRate" class="form-control" placeholder="8.5" value="0.0">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Tenure (Months) <span class="text-danger">*</span></label>
+                <input type="number" name="tenure_months" id="loanTenure" class="form-control" placeholder="24" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Monthly EMI Amount (₹)</label>
+                <input type="number" step="0.01" name="monthly_emi" id="loanEmi" class="form-control" placeholder="Auto-calculated if blank">
+                <small class="text-muted" style="font-size:0.75rem;">Leave empty to auto-calculate.</small>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <label class="form-label small fw-bold">Loan Start Date <span class="text-danger">*</span></label>
+                <input type="date" name="start_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-bold">Monthly EMI Due Day (1-31)</label>
+                <input type="number" name="emi_due_day" class="form-control" min="1" max="31" value="5" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-bold">Loan Account / Reference Number</label>
+                <input type="text" name="loan_reference_number" class="form-control" placeholder="Optional Account #">
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label small fw-bold">Notes</label>
+            <textarea name="notes" class="form-control" rows="2" placeholder="Optional notes..."></textarea>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-purple px-4"><i class="bi bi-check-lg me-1"></i> Save Loan & Generate Schedule</button>
+            <a href="{{ url_for('loans_list') }}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<!-- Filters Bar -->
+<div class="card-clean p-3 mb-4">
+    <form method="GET" action="{{ url_for('loans_list') }}" class="row g-2 align-items-center">
+        <div class="col-md-4">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                <input type="text" name="search" class="form-control" placeholder="Search loan name, lender, reference..." value="{{ search }}">
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select name="loan_type" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">All Loan Types</option>
+                {% for lt_val, lt_label in loan_types %}
+                <option value="{{ lt_val }}" {% if current_type == lt_val %}selected{% endif %}>{{ lt_label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">All Statuses</option>
+                {% for ls_val, ls_label in loan_statuses %}
+                <option value="{{ ls_val }}" {% if current_status == ls_val %}selected{% endif %}>{{ ls_label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 d-flex gap-1">
+            <button type="submit" class="btn btn-sm btn-purple w-100">Filter</button>
+            <a href="{{ url_for('loans_list') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-circle"></i></a>
+        </div>
+    </form>
+</div>
+
+<!-- Loans Table -->
+<div class="card-clean">
+    <div class="card-header-clean">
+        <h5>Registered Loans ({{ loans|length }})</h5>
+        <a href="{{ url_for('report_loans_csv') }}" class="btn btn-sm btn-outline-primary" style="color: #6C3BFF; border-color: #6C3BFF;">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Loans CSV
+        </a>
+    </div>
+
+    <div class="p-0">
+        {% if loans %}
+        <div class="table-responsive">
+            <table class="table table-clean mb-0">
+                <thead>
+                    <tr>
+                        <th>Loan ID</th>
+                        <th>Loan Name</th>
+                        <th>Lender</th>
+                        <th>Principal (₹)</th>
+                        <th>Interest</th>
+                        <th>Monthly EMI</th>
+                        <th>Repayment Progress</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in loans %}
+                    <tr>
+                        <td><code>{{ loan.loan_id_code }}</code></td>
+                        <td>
+                            <a href="{{ url_for('loan_details', id=loan.id) }}" class="fw-bold text-decoration-none text-dark">
+                                {{ loan.loan_name }}
+                            </a>
+                            <br/><small class="text-muted">{{ loan.loan_type_display }}</small>
+                        </td>
+                        <td>{{ loan.lender_name }}</td>
+                        <td class="fw-bold">₹ {{ "{:,.2f}".format(loan.principal_amount) }}</td>
+                        <td>{{ loan.annual_interest_rate }}%</td>
+                        <td class="fw-bold" style="color: #6C3BFF;">₹ {{ "{:,.2f}".format(loan.monthly_emi) }}</td>
+                        <td style="width: 170px;">
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                                <span>{{ loan.repayment_progress_percent }}%</span>
+                                <span>₹ {{ "{:,.0f}".format(loan.total_eligible_paid) }}</span>
+                            </div>
+                            <div class="progress" style="height: 8px; border-radius: 4px;">
+                                <div class="progress-bar" style="width: {{ loan.repayment_progress_percent }}%; background: linear-gradient(90deg, #6C3BFF, #2878FF);"></div>
+                            </div>
+                        </td>
+                        <td><span class="{{ loan.status_badge_class }}">{{ loan.status_display }}</span></td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('loan_details', id=loan.id) }}" class="btn btn-light" title="View Loan Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{{ url_for('report_loan_schedule_pdf', id=loan.id) }}" class="btn btn-light" title="Download EMI Schedule PDF">
+                                    <i class="bi bi-file-earmark-pdf"></i>
+                                </a>
+                                <form action="{{ url_for('delete_loan', id=loan.id) }}" method="POST" class="d-inline" data-confirm="Are you sure you want to delete this loan and its complete EMI schedule?">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-light text-danger" title="Delete Loan">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-5 text-center text-muted">
+            <i class="bi bi-bank fs-1 text-muted d-block mb-2"></i>
+            <h5>No loans registered</h5>
+            <p class="small">Add your first active or completed loan to track EMIs and payments.</p>
+            <a href="{{ url_for('add_loan') }}" class="btn btn-primary-custom mt-2">
+                <i class="bi bi-plus-circle me-1"></i> Add New Loan
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

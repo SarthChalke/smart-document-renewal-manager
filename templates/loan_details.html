@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}{{ loan.loan_name }} ({{ loan.loan_id_code }}) — Loan Details{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{{ url_for('loans_list') }}" class="btn btn-sm btn-light py-1 px-2"><i class="bi bi-arrow-left"></i> Back</a>
+            <h2 class="fw-bold mb-0" style="color: #6C3BFF;">{{ loan.loan_name }}</h2>
+            <span class="{{ loan.status_badge_class }}">{{ loan.status_display }}</span>
+        </div>
+        <small class="text-muted"><code>{{ loan.loan_id_code }}</code> · {{ loan.lender_name }} · {{ loan.loan_type_display }}</small>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('report_loan_schedule_pdf', id=loan.id) }}" class="btn btn-purple d-flex align-items-center gap-1 shadow-sm">
+            <i class="bi bi-file-earmark-pdf"></i> Schedule PDF
+        </a>
+        <a href="{{ url_for('edit_loan', id=loan.id) }}" class="btn btn-outline-secondary d-flex align-items-center gap-1">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
+        {% if loan.status == 'active' %}
+        <form action="{{ url_for('close_loan', id=loan.id) }}" method="POST" class="d-inline" data-confirm="Are you sure you want to mark this loan as Closed?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="bi bi-check2-circle"></i> Close Loan
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Key Metrics Row -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="bi bi-cash"></i></div>
+            <div>
+                <h4 class="stat-value" style="font-size:1.15rem; color: #2878FF;">₹ {{ "{:,.2f}".format(loan.principal_amount) }}</h4>
+                <p class="stat-label">Principal Amount</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="stat-card">
+            <div class="stat-icon purple"><i class="bi bi-percent"></i></div>
+            <div>
+                <h4 class="stat-value" style="font-size:1.15rem; color: #6C3BFF;">{{ loan.annual_interest_rate }}%</h4>
+                <p class="stat-label">Interest Rate</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="stat-card">
+            <div class="stat-icon pink"><i class="bi bi-calendar2-event"></i></div>
+            <div>
+                <h4 class="stat-value" style="font-size:1.15rem; color: #F044A7;">₹ {{ "{:,.2f}".format(loan.monthly_emi) }}</h4>
+                <p class="stat-label">Monthly EMI (Day {{ loan.emi_due_day }})</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="stat-card">
+            <div class="stat-icon cyan"><i class="bi bi-check2-circle"></i></div>
+            <div>
+                <h4 class="stat-value" style="font-size:1.15rem; color: #0C7E8A;">₹ {{ "{:,.2f}".format(loan.total_eligible_paid) }}</h4>
+                <p class="stat-label">Total Repaid</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="stat-card">
+            <div class="stat-icon orange"><i class="bi bi-pie-chart"></i></div>
+            <div>
+                <h4 class="stat-value text-warning" style="font-size:1.15rem;">₹ {{ "{:,.2f}".format(loan.estimated_outstanding_principal) }}</h4>
+                <p class="stat-label">Est. Outstanding</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Bar -->
+<div class="card-clean p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="fw-bold" style="color: #6C3BFF;"><i class="bi bi-speedometer2 me-2"></i> Repayment Progress</span>
+        <span class="fw-bold" style="color: #6C3BFF;">{{ loan.repayment_progress_percent }}% Repaid ({{ loan.paid_emis_count }}/{{ loan.total_emis_count }} EMIs Paid)</span>
+    </div>
+    <div class="progress" style="height: 12px; border-radius:6px;">
+        <div class="progress-bar" role="progressbar" style="width: {{ loan.repayment_progress_percent }}%; background: linear-gradient(90deg, #6C3BFF, #2878FF);"></div>
+    </div>
+</div>
+
+<!-- Edit Form (if toggled) -->
+{% if edit_mode %}
+<div class="card-clean p-4 mb-4" style="border: 2px solid #6C3BFF;">
+    <h5 class="fw-bold mb-3" style="color: #6C3BFF;"><i class="bi bi-pencil-square me-2"></i> Edit Loan</h5>
+    <form method="POST" action="{{ url_for('edit_loan', id=loan.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label class="form-label small fw-bold">Loan Name</label>
+                <input type="text" name="loan_name" class="form-control" value="{{ loan.loan_name }}" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Loan Type</label>
+                <select name="loan_type" class="form-select">
+                    {% for lt_val, lt_label in loan_types %}
+                    <option value="{{ lt_val }}" {% if loan.loan_type == lt_val %}selected{% endif %}>{{ lt_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Bank / Lender</label>
+                <input type="text" name="lender_name" class="form-control" value="{{ loan.lender_name }}" required>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label class="form-label small fw-bold">Account / Reference #</label>
+                <input type="text" name="loan_reference_number" class="form-control" value="{{ loan.loan_reference_number or '' }}">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small fw-bold">Status</label>
+                <select name="status" class="form-select">
+                    {% for ls_val, ls_label in loan_statuses %}
+                    <option value="{{ ls_val }}" {% if loan.status == ls_val %}selected{% endif %}>{{ ls_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label small fw-bold">Notes</label>
+            <textarea name="notes" class="form-control" rows="2">{{ loan.notes or '' }}</textarea>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-purple"><i class="bi bi-check-lg me-1"></i> Save Changes</button>
+            <a href="{{ url_for('loan_details', id=loan.id) }}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<!-- EMI Schedule Table -->
+<div class="card-clean mb-4">
+    <div class="card-header-clean">
+        <h5><i class="bi bi-calendar2-week me-2" style="color: #6C3BFF;"></i> Complete EMI Schedule</h5>
+        <span class="text-muted small">Total Installments: {{ schedules|length }}</span>
+    </div>
+
+    <div class="p-0">
+        {% if schedules %}
+        <div class="table-responsive" style="max-height: 480px; overflow-y: auto;">
+            <table class="table table-clean mb-0">
+                <thead style="position: sticky; top:0; z-index:10; background:#f8fafc;">
+                    <tr>
+                        <th>#</th>
+                        <th>Due Date</th>
+                        <th>Scheduled EMI</th>
+                        <th>Principal Comp.</th>
+                        <th>Interest Comp.</th>
+                        <th>Amount Paid</th>
+                        <th>Remaining</th>
+                        <th>Status</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for emi in schedules %}
+                    <tr>
+                        <td><strong>{{ emi.installment_number }}</strong></td>
+                        <td>{{ emi.due_date.strftime('%d %b %Y') }}</td>
+                        <td class="fw-bold">₹ {{ "{:,.2f}".format(emi.scheduled_amount) }}</td>
+                        <td>₹ {{ "{:,.2f}".format(emi.principal_component) }}</td>
+                        <td>₹ {{ "{:,.2f}".format(emi.interest_component) }}</td>
+                        <td class="fw-bold" style="color: #0C7E8A;">₹ {{ "{:,.2f}".format(emi.amount_paid) }}</td>
+                        <td class="text-danger fw-bold">₹ {{ "{:,.2f}".format(emi.remaining_amount) }}</td>
+                        <td><span class="{{ emi.status_badge_class }}">{{ emi.status_display }}</span></td>
+                        <td class="text-end">
+                            {% if emi.status != 'paid' %}
+                            <a href="{{ url_for('pay_emi', id=emi.id) }}" class="btn btn-sm btn-pink py-0 px-2">
+                                <i class="bi bi-credit-card me-1"></i> Pay
+                            </a>
+                            {% else %}
+                            <span class="badge" style="background-color: #E2F8FA; color: #0C7E8A;"><i class="bi bi-check-lg"></i> Paid</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-4 text-center text-muted">
+            No EMI schedule installments generated yet.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Payment History for this Loan -->
+<div class="card-clean">
+    <div class="card-header-clean">
+        <h5><i class="bi bi-receipt me-2" style="color: #6C3BFF;"></i> Payment History for this Loan</h5>
+    </div>
+    <div class="p-0">
+        {% if payments %}
+        <div class="table-responsive">
+            <table class="table table-clean mb-0">
+                <thead>
+                    <tr>
+                        <th>Receipt No</th>
+                        <th>Installment</th>
+                        <th>Amount Paid</th>
+                        <th>Payment Date</th>
+                        <th>Method</th>
+                        <th>Transaction Ref</th>
+                        <th>Status</th>
+                        <th class="text-end">Receipt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in payments %}
+                    <tr>
+                        <td><code>{{ p.receipt.receipt_number if p.receipt else p.payment_reference }}</code></td>
+                        <td>{{ "EMI #" ~ p.emi_schedule.installment_number if p.emi_schedule else "Direct Payment" }}</td>
+                        <td class="fw-bold" style="color: #6C3BFF;">₹ {{ "{:,.2f}".format(p.amount) }}</td>
+                        <td>{{ p.payment_date.strftime('%d %b %Y') }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ p.payment_method }}</span></td>
+                        <td><code>{{ p.transaction_reference or "—" }}</code></td>
+                        <td><span class="{{ p.status_badge_class }}">{{ p.payment_status.title() }}</span></td>
+                        <td class="text-end">
+                            {% if p.receipt %}
+                            <a href="{{ url_for('download_receipt_pdf', id=p.receipt.id) }}" class="btn btn-sm btn-outline-dark py-0 px-2">
+                                <i class="bi bi-file-earmark-pdf"></i> PDF
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-4 text-center text-muted">
+            No payments recorded yet for this loan.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+env/
+venv/
+ENV/
+
+# Database
+instance/*.db
+*.sqlite3
+
+# Uploads
+uploads/documents/*
+!uploads/documents/.gitkeep
+uploads/receipts/*
+!uploads/receipts/.gitkeep
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace

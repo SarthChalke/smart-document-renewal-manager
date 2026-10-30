@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Smart Document Expiry, Loan & EMI Reminder Manager - Track documents, manage loans, and never miss an EMI payment.">
+    <title>{% block title %}Smart Document Manager{% endblock %}</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if current_user.is_authenticated %}
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <h4><i class="bi bi-shield-check"></i> Smart DocManager</h4>
+            <small>Document · Loan · EMI</small>
+        </div>
+        <ul class="sidebar-nav">
+            <li class="nav-section">Main</li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}" href="{{ url_for('dashboard.index') }}">
+                    <i class="bi bi-grid-1x2-fill"></i> Dashboard
+                </a>
+            </li>
+
+            <li class="nav-section">Documents</li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'documents.list_documents' %}active{% endif %}" href="{{ url_for('documents.list_documents') }}">
+                    <i class="bi bi-folder-fill"></i> My Documents
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'documents.upload' %}active{% endif %}" href="{{ url_for('documents.upload') }}">
+                    <i class="bi bi-cloud-arrow-up-fill"></i> Upload Document
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'documents.expiry_reminders' %}active{% endif %}" href="{{ url_for('documents.expiry_reminders') }}">
+                    <i class="bi bi-clock-history"></i> Expiry Reminders
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'renewals.renewal_history' %}active{% endif %}" href="{{ url_for('renewals.renewal_history') }}">
+                    <i class="bi bi-arrow-repeat"></i> Renewal History
+                </a>
+            </li>
+
+            <li class="nav-section">Loans & EMI</li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'loans.list_loans' %}active{% endif %}" href="{{ url_for('loans.list_loans') }}">
+                    <i class="bi bi-bank2"></i> Loan Management
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'loans.add_loan' %}active{% endif %}" href="{{ url_for('loans.add_loan') }}">
+                    <i class="bi bi-plus-circle-fill"></i> Add New Loan
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'emi.list_emi' %}active{% endif %}" href="{{ url_for('emi.list_emi') }}">
+                    <i class="bi bi-calendar2-check"></i> EMI Management
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'emi.upcoming' %}active{% endif %}" href="{{ url_for('emi.upcoming') }}">
+                    <i class="bi bi-calendar-event"></i> Upcoming EMIs
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'emi.overdue' %}active{% endif %}" href="{{ url_for('emi.overdue') }}">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Overdue EMIs
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'payments.payment_history' %}active{% endif %}" href="{{ url_for('payments.payment_history') }}">
+                    <i class="bi bi-receipt-cutoff"></i> Payment History
+                </a>
+            </li>
+
+            <li class="nav-section">System</li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'notifications.list_notifications' %}active{% endif %}" href="{{ url_for('notifications.list_notifications') }}">
+                    <i class="bi bi-bell-fill"></i> Notifications
+                    {% if unread_notification_count > 0 %}
+                    <span class="badge bg-danger">{{ unread_notification_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'reminders.settings' %}active{% endif %}" href="{{ url_for('reminders.settings') }}">
+                    <i class="bi bi-gear-fill"></i> Settings
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'auth.profile' %}active{% endif %}" href="{{ url_for('auth.profile') }}">
+                    <i class="bi bi-person-circle"></i> Profile
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('auth.logout') }}">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Navbar -->
+        <div class="top-navbar">
+            <div class="d-flex align-items-center">
+                <button class="sidebar-toggle me-3" id="sidebarToggle">
+                    <i class="bi bi-list"></i>
+                </button>
+                <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+            </div>
+            <div class="nav-actions">
+                <a href="{{ url_for('notifications.list_notifications') }}" class="btn-icon" title="Notifications">
+                    <i class="bi bi-bell"></i>
+                    {% if unread_notification_count > 0 %}
+                    <span class="notif-badge">{{ unread_notification_count }}</span>
+                    {% endif %}
+                </a>
+                <a href="{{ url_for('auth.profile') }}" class="btn-icon" title="Profile">
+                    <i class="bi bi-person"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Flash Messages -->
+        <div class="page-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Unauthenticated Content -->
+    {% block auth_content %}{% endblock %}
+    {% endif %}
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

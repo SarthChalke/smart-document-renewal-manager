@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Add New Document — Smart Document & Financial Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: #6C3BFF;">
+            <i class="bi bi-cloud-arrow-up-fill me-2" style="color: #2878FF;"></i> Add New Document
+        </h2>
+        <p class="text-muted small mb-0">Upload a PDF or image file and record document validity dates.</p>
+    </div>
+    <a href="{{ url_for('scan_document') }}" class="btn btn-purple d-flex align-items-center gap-2 shadow-sm">
+        <i class="bi bi-camera-fill"></i> Use Camera Scanner (OCR)
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card-clean p-4">
+            <form method="POST" action="{{ url_for('add_document') }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-7">
+                        <label class="form-label small fw-bold">Document Title <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" placeholder="e.g. My Driving Licence 2026" required>
+                    </div>
+
+                    <div class="col-md-5">
+                        <label class="form-label small fw-bold">Category <span class="text-danger">*</span></label>
+                        <select name="category" class="form-select" required>
+                            <option value="">Select Category...</option>
+                            {% for cat_key, cat_name in categories %}
+                            <option value="{{ cat_key }}">{{ cat_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Document / Policy / Reference Number</label>
+                        <input type="text" name="document_number" class="form-control" placeholder="e.g. MH14-20180012345">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Holder / Member Name</label>
+                        <input type="text" name="holder_name" class="form-control" placeholder="Name as shown on document">
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Issuing Authority</label>
+                        <input type="text" name="issuing_authority" class="form-control" placeholder="e.g. UIDAI, RTO Pune, LIC India">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">Issue Date</label>
+                        <input type="date" name="issue_date" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold" style="color: #6C3BFF;">Expiry Date</label>
+                        <input type="date" name="expiry_date" class="form-control" style="border-color: #6C3BFF;">
+                        <small class="text-muted" style="font-size:0.75rem;">Leave empty if lifetime validity.</small>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Document File <span class="text-danger">*</span></label>
+                    <input type="file" name="document_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
+                    <small class="text-muted">Accepted formats: PDF, JPG, JPEG, PNG. Max size: 16 MB.</small>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold">Notes / Description</label>
+                    <textarea name="notes" class="form-control" rows="2" placeholder="Optional personal notes or reminder instructions..."></textarea>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary-custom px-4">
+                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> Save Document
+                    </button>
+                    <a href="{{ url_for('documents_list') }}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Help Column -->
+    <div class="col-lg-4">
+        <div class="card-clean p-4 bg-light">
+            <h6 class="fw-bold mb-3" style="color: #6C3BFF;"><i class="bi bi-info-circle me-2"></i> Document Validity Rules</h6>
+            <ul class="small text-muted ps-3 mb-3">
+                <li class="mb-2"><strong>Expiring Soon:</strong> Documents with an expiry date within 30 days are automatically highlighted.</li>
+                <li class="mb-2"><strong>Notifications:</strong> The system sends in-app reminders at 30 days, 14 days, 7 days, and 1 day before expiration.</li>
+                <li class="mb-2"><strong>Renewal:</strong> When you initiate renewal, previous expiry history is preserved.</li>
+            </ul>
+
+            <div class="p-3 bg-white border rounded">
+                <span class="d-block fw-bold small text-dark mb-1"><i class="bi bi-camera me-1" style="color: #6C3BFF;"></i> Have a physical document?</span>
+                <p class="small text-muted mb-2">Use your phone or webcam to snap a photo and extract dates automatically using OCR.</p>
+                <a href="{{ url_for('scan_document') }}" class="btn btn-sm btn-outline-primary w-100" style="color: #6C3BFF; border-color: #6C3BFF;">Open Camera Scanner</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Search Results for "{{ query }}" — Smart Document & Financial Manager{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2 class="fw-bold mb-1" style="color: #6C3BFF;">Global Search Results</h2>
+    <p class="text-muted small mb-0">Showing results matching: <strong>"{{ query }}"</strong></p>
+</div>
+
+<!-- Documents Results -->
+<div class="card-clean mb-4">
+    <div class="card-header-clean">
+        <h5><i class="bi bi-files me-2" style="color: #6C3BFF;"></i> Documents ({{ documents|length }})</h5>
+    </div>
+    <div class="p-0">
+        {% if documents %}
+        <div class="table-responsive">
+            <table class="table table-clean mb-0">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Document #</th>
+                        <th>Holder Name</th>
+                        <th>Expiry Date</th>
+                        <th>Status</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in documents %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('document_details', id=d.id) }}" class="fw-bold text-decoration-none text-dark">
+                                {{ d.title }}
+                            </a>
+                        </td>
+                        <td>{{ d.category_display }}</td>
+                        <td><code>{{ d.document_number or "—" }}</code></td>
+                        <td>{{ d.holder_name or "—" }}</td>
+                        <td>{{ d.expiry_date.strftime('%d %b %Y') if d.expiry_date else 'Lifetime' }}</td>
+                        <td><span class="{{ d.status_badge_class }}">{{ d.status_display }}</span></td>
+                        <td class="text-end">
+                            <a href="{{ url_for('document_details', id=d.id) }}" class="btn btn-sm btn-light">View</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="p-3 text-muted small mb-0">No documents matched your query.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Loans Results -->
+<div class="card-clean mb-4">
+    <div class="card-header-clean">
+        <h5><i class="bi bi-bank2 me-2" style="color: #2878FF;"></i> Loans ({{ loans|length }})</h5>
+    </div>
+    <div class="p-0">
+        {% if loans %}
+        <div class="table-responsive">
+            <table class="table table-clean mb-0">
+                <thead>
+                    <tr>
+                        <th>Loan ID</th>
+                        <th>Loan Name</th>
+                        <th>Lender</th>
+                        <th>Principal Amount</th>
+                        <th>Monthly EMI</th>
+                        <th>Status</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in loans %}
+                    <tr>
+                        <td><code>{{ l.loan_id_code }}</code></td>
+                        <td class="fw-bold">{{ l.loan_name }}</td>
+                        <td>{{ l.lender_name }}</td>
+                        <td>₹ {{ "{:,.2f}".format(l.principal_amount) }}</td>
+                        <td class="fw-bold" style="color: #6C3BFF;">₹ {{ "{:,.2f}".format(l.monthly_emi) }}</td>
+                        <td><span class="{{ l.status_badge_class }}">{{ l.status_display }}</span></td>
+                        <td class="text-end">
+                            <a href="{{ url_for('loan_details', id=l.id) }}" class="btn btn-sm btn-light">Details</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="p-3 text-muted small mb-0">No loans matched your query.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Payments Results -->
+<div class="card-clean">
+    <div class="card-header-clean">
+        <h5><i class="bi bi-receipt text-warning me-2"></i> Payment Records ({{ payments|length }})</h5>
+    </div>
+    <div class="p-0">
+        {% if payments %}
+        <div class="table-responsive">
+            <table class="table table-clean mb-0">
+                <thead>
+                    <tr>
+                        <th>Receipt #</th>
+                        <th>Loan Name</th>
+                        <th>Amount Paid</th>
+                        <th>Payment Date</th>
+                        <th>Method</th>
+                        <th>Reference</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in payments %}
+                    <tr>
+                        <td><code>{{ p.receipt.receipt_number if p.receipt else p.payment_reference }}</code></td>
+                        <td>{{ p.loan.loan_name }}</td>
+                        <td class="fw-bold" style="color: #6C3BFF;">₹ {{ "{:,.2f}".format(p.amount) }}</td>
+                        <td>{{ p.payment_date.strftime('%d %b %Y') }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ p.payment_method }}</span></td>
+                        <td><code>{{ p.transaction_reference or "—" }}</code></td>
+                        <td class="text-end">
+                            {% if p.receipt %}
+                            <a href="{{ url_for('view_receipt', id=p.receipt.id) }}" class="btn btn-sm btn-light">Receipt</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="p-3 text-muted small mb-0">No payment records matched your query.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

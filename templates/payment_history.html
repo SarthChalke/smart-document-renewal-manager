@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}Payment History & Receipts — Smart Document & Financial Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: #6C3BFF;">
+            <i class="bi bi-receipt-cutoff me-2" style="color: #2878FF;"></i> Payment History & Receipts
+        </h2>
+        <p class="text-muted small mb-0">Audit-logged payment records and official application-generated payment receipts.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('report_payments_csv') }}" class="btn btn-purple d-flex align-items-center gap-1 shadow-sm">
+            <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+        </a>
+    </div>
+</div>
+
+<!-- Receipt Modal View (if requested) -->
+{% if view_receipt_modal and receipt %}
+<div class="card-clean p-4 mb-4 shadow-lg" style="border: 2px solid #6C3BFF;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0" style="color: #6C3BFF;">
+            <i class="bi bi-receipt-cutoff me-2"></i> Payment Receipt: {{ receipt.receipt_number }}
+        </h5>
+        <div class="d-flex gap-2">
+            <button onclick="window.print()" class="btn btn-sm btn-outline-dark"><i class="bi bi-printer me-1"></i> Print</button>
+            <a href="{{ url_for('download_receipt_pdf', id=receipt.id) }}" class="btn btn-sm btn-primary-custom"><i class="bi bi-download me-1"></i> Download PDF</a>
+            <a href="{{ url_for('payment_history') }}" class="btn btn-sm btn-outline-secondary">Close</a>
+        </div>
+    </div>
+
+    <!-- Official Receipt Layout -->
+    <div class="p-4 border rounded bg-white" id="printableReceiptArea">
+        <div class="text-center pb-3 border-bottom mb-3">
+            <h4 class="fw-bold mb-0" style="color: #6C3BFF;">Smart Document & Financial Management System</h4>
+            <p class="text-muted small mb-0">Application Payment Record</p>
+        </div>
+
+        <div class="row g-2 small mb-3">
+            <div class="col-6"><strong>Receipt Number:</strong> {{ receipt.receipt_number }}</div>
+            <div class="col-6 text-end"><strong>Generated Date:</strong> {{ receipt.generated_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+            <div class="col-6"><strong>Payment Date:</strong> {{ receipt.payment_date.strftime('%d %b %Y') }}</div>
+            <div class="col-6 text-end">
+                <strong>Status:</strong>
+                <span class="badge" style="background: #22C7D6; color: #0F172A; font-weight: 700;">{{ receipt.payment_status.upper() }}</span>
+            </div>
+        </div>
+
+        <table class="table table-bordered mb-3" style="font-size:0.9rem;">
+            <tbody>
+                <tr>
+                    <td class="text-muted" style="width: 35%;">Loan Name</td>
+                    <td class="fw-bold">{{ receipt.loan_name }}</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">Bank / Lender</td>
+                    <td>{{ receipt.lender_name }}</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">Installment</td>
+                    <td>{{ "EMI #" ~ receipt.emi_number if receipt.emi_number else "Direct Loan Payment" }}</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">Payment Method</td>
+                    <td>{{ receipt.payment_method }}</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">Transaction / Reference ID</td>
+                    <td><code>{{ receipt.transaction_reference or "N/A" }}</code></td>
+                </tr>
+                <tr style="background-color: #ECE8FF;">
+                    <td class="fw-bold fs-6" style="color: #6C3BFF;">Total Amount Paid</td>
+                    <td class="fw-bold fs-5" style="color: #6C3BFF;">₹ {{ "{:,.2f}".format(receipt.amount) }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Mandatory Disclaimer -->
+        <div class="p-3 bg-light border border-danger-subtle rounded text-center small text-danger">
+            <strong>APPLICATION-GENERATED PAYMENT RECORD — NOT A BANK-ISSUED RECEIPT</strong><br/>
+            This record was generated automatically by the application for internal personal tracking and audit history.
+            It does not constitute official bank clearance or legal proof from a lending institution.
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Filters Bar -->
+<div class="card-clean p-3 mb-4">
+    <form method="GET" action="{{ url_for('payment_history') }}" class="row g-2 align-items-center">
+        <div class="col-md-3">
+            <input type="text" name="search" class="form-control form-control-sm" placeholder="Search reference or transaction..." value="{{ search }}">
+        </div>
+        <div class="col-md-3">
+            <select name="loan_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">All Loans</option>
+                {% for l in loans %}
+                <option value="{{ l.id }}" {% if current_loan_id == l.id %}selected{% endif %}>{{ l.loan_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select name="method" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">All Payment Methods</option>
+                {% for m_val, m_label in payment_methods %}
+                <option value="{{ m_val }}" {% if current_method == m_val %}selected{% endif %}>{{ m_label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">All Statuses</option>
+                {% for s_val, s_label in payment_statuses %}
+                <option value="{{ s_val }}" {% if current_status == s_val %}selected{% endif %}>{{ s_label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-1 d-flex gap-1">
+            <button type="submit" class="btn btn-sm btn-purple w-100"><i class="bi bi-funnel"></i></button>
+            <a href="{{ url_for('payment_history') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-circle"></i></a>
+        </div>
+    </form>
+</div>
+
+<!-- Ledger Table -->
+<div class="card-clean">
+    <div class="card-header-clean">
+        <h5>Payment Records Ledger ({{ payments|length }})</h5>
+        <span class="fw-bold" style="color: #6C3BFF;">Total Completed: ₹ {{ "{:,.2f}".format(total_eligible) }}</span>
+    </div>
+
+    <div class="p-0">
+        {% if payments %}
+        <div class="table-responsive">
+            <table class="table table-clean mb-0">
+                <thead>
+                    <tr>
+                        <th>Receipt #</th>
+                        <th>Loan Name</th>
+                        <th>Installment</th>
+                        <th>Amount Paid</th>
+                        <th>Date</th>
+                        <th>Method</th>
+                        <th>Transaction Ref</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in payments %}
+                    <tr>
+                        <td>
+                            {% if p.receipt %}
+                            <a href="{{ url_for('view_receipt', id=p.receipt.id) }}" class="fw-bold text-decoration-none" style="color: #6C3BFF;">
+                                {{ p.receipt.receipt_number }}
+                            </a>
+                            {% else %}
+                            <code>{{ p.payment_reference }}</code>
+                            {% endif %}
+                        </td>
+                        <td>{{ p.loan.loan_name }}</td>
+                        <td>{{ "EMI #" ~ p.emi_schedule.installment_number if p.emi_schedule else "Direct Payment" }}</td>
+                        <td class="fw-bold" style="color: #6C3BFF;">₹ {{ "{:,.2f}".format(p.amount) }}</td>
+                        <td>{{ p.payment_date.strftime('%d %b %Y') }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ p.payment_method }}</span></td>
+                        <td><code>{{ p.transaction_reference or "—" }}</code></td>
+                        <td><span class="{{ p.status_badge_class }}">{{ p.payment_status.title() }}</span></td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                {% if p.receipt %}
+                                <a href="{{ url_for('view_receipt', id=p.receipt.id) }}" class="btn btn-light" title="View Receipt">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{{ url_for('download_receipt_pdf', id=p.receipt.id) }}" class="btn btn-light" title="Download PDF">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                {% endif %}
+                                {% if p.payment_status == 'completed' %}
+                                <form action="{{ url_for('cancel_payment', id=p.id) }}" method="POST" class="d-inline" data-confirm="Cancel this payment record? This will safely reverse the loan balance.">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="reason" value="User cancelled from ledger">
+                                    <button type="submit" class="btn btn-light text-warning" title="Cancel Payment">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-5 text-center text-muted">
+            <i class="bi bi-receipt fs-1 text-muted d-block mb-2"></i>
+            <h5>No payment records found</h5>
+            <p class="small">Try adjusting search filters or record an EMI or loan payment.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,398 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Smart Document Manager{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block extra_css %}
+<link href="{{ url_for('static', filename='css/dashboard.css') }}" rel="stylesheet">
+{% endblock %}
+{% block content %}
+
+<!-- ═══ Welcome Header ═══ -->
+<div class="dash-welcome animate-in">
+    <h2>Welcome back, {{ current_user.full_name.split(' ')[0] }}! 👋</h2>
+    <p>Here's your financial and document overview for {{ today.strftime('%A, %d %B %Y') if today else 'today' }}.</p>
+    <div class="welcome-actions">
+        <a href="{{ url_for('documents.upload') }}" class="btn btn-light"><i class="bi bi-cloud-arrow-up me-1"></i> Upload Document</a>
+        <a href="{{ url_for('loans.add_loan') }}" class="btn btn-outline-light"><i class="bi bi-plus-circle me-1"></i> Add Loan</a>
+        <a href="{{ url_for('notifications.list_notifications') }}" class="btn btn-outline-light"><i class="bi bi-bell me-1"></i> Notifications{% if unread_notification_count > 0 %} ({{ unread_notification_count }}){% endif %}</a>
+    </div>
+</div>
+
+<!-- ═══ Alert Banners ═══ -->
+{% if overdue_emis > 0 %}
+<div class="dash-alert-banner danger">
+    <div class="alert-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+    <div class="alert-text">
+        <strong>{{ overdue_emis }} Overdue EMI{{ 's' if overdue_emis > 1 else '' }}</strong>
+        <span>You have overdue payments that require immediate attention.</span>
+    </div>
+    <a href="{{ url_for('emi.overdue') }}" class="btn btn-sm btn-outline-danger">View Overdue</a>
+</div>
+{% endif %}
+
+{% if expired_docs > 0 %}
+<div class="dash-alert-banner">
+    <div class="alert-icon"><i class="bi bi-file-earmark-x-fill"></i></div>
+    <div class="alert-text">
+        <strong>{{ expired_docs }} Expired Document{{ 's' if expired_docs > 1 else '' }}</strong>
+        <span>Some documents have expired and may need renewal.</span>
+    </div>
+    <a href="{{ url_for('documents.expiry_reminders') }}" class="btn btn-sm btn-outline-warning">View Expiries</a>
+</div>
+{% endif %}
+
+<!-- ═══ Quick Summary Stats ═══ -->
+<div class="quick-stats-row">
+    <div class="quick-stat animate-in">
+        <div class="qs-icon gradient-blue"><i class="bi bi-cash-coin"></i></div>
+        <div class="qs-info">
+            <h6>Monthly EMI Outflow</h6>
+            <div class="qs-value currency">₹{{ "{:,.0f}".format(monthly_emi) }}</div>
+        </div>
+    </div>
+    <div class="quick-stat animate-in">
+        <div class="qs-icon gradient-emerald"><i class="bi bi-check2-all"></i></div>
+        <div class="qs-info">
+            <h6>Paid This Month</h6>
+            <div class="qs-value">{{ paid_this_month }} EMI{{ 's' if paid_this_month != 1 else '' }}</div>
+        </div>
+    </div>
+    <div class="quick-stat animate-in">
+        <div class="qs-icon gradient-amber"><i class="bi bi-piggy-bank"></i></div>
+        <div class="qs-info">
+            <h6>Outstanding (Estimate)</h6>
+            <div class="qs-value currency">{% if outstanding is not none %}₹{{ "{:,.0f}".format(outstanding) }}{% else %}<span style="font-size:0.85rem;color:var(--text-muted)">N/A</span>{% endif %}</div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Document Management Cards ═══ -->
+<div class="section-header">
+    <h5><i class="bi bi-folder-fill me-2 text-primary"></i>Document Management</h5>
+</div>
+<div class="dashboard-grid">
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="bi bi-files"></i></div>
+        <div class="stat-value" data-count="{{ total_docs }}">{{ total_docs }}</div>
+        <div class="stat-label">Total Documents</div>
+        {% if total_docs > 0 %}
+        <div class="progress-mini">
+            <div class="bar blue" style="width: {{ (valid_docs / total_docs * 100) if total_docs > 0 else 0 }}%"></div>
+        </div>
+        {% endif %}
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="bi bi-check-circle-fill"></i></div>
+        <div class="stat-value" data-count="{{ valid_docs }}">{{ valid_docs }}</div>
+        <div class="stat-label">Valid Documents</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon yellow"><i class="bi bi-exclamation-circle-fill"></i></div>
+        <div class="stat-value" data-count="{{ expiring_docs }}">{{ expiring_docs }}</div>
+        <div class="stat-label">Expiring Soon</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="bi bi-x-circle-fill"></i></div>
+        <div class="stat-value" data-count="{{ expired_docs }}">{{ expired_docs }}</div>
+        <div class="stat-label">Expired</div>
+    </div>
+</div>
+
+<!-- ═══ Loan & EMI Cards ═══ -->
+<div class="section-header">
+    <h5><i class="bi bi-bank2 me-2 text-primary"></i>Loans & EMI</h5>
+</div>
+<div class="dashboard-grid">
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="bi bi-bank"></i></div>
+        <div class="stat-value" data-count="{{ total_loans }}">{{ total_loans }}</div>
+        <div class="stat-label">Total Loans</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="bi bi-graph-up-arrow"></i></div>
+        <div class="stat-value" data-count="{{ active_loans }}">{{ active_loans }}</div>
+        <div class="stat-label">Active Loans</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon cyan"><i class="bi bi-calendar-event"></i></div>
+        <div class="stat-value" data-count="{{ upcoming_emis }}">{{ upcoming_emis }}</div>
+        <div class="stat-label">Upcoming EMIs</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="bi bi-exclamation-triangle-fill"></i></div>
+        <div class="stat-value" data-count="{{ overdue_emis }}">{{ overdue_emis }}</div>
+        <div class="stat-label">Overdue EMIs</div>
+    </div>
+</div>
+
+<!-- ═══ Charts ═══ -->
+<div class="section-header">
+    <h5><i class="bi bi-bar-chart-fill me-2 text-primary"></i>Analytics</h5>
+</div>
+<div class="charts-grid">
+    <div class="chart-container">
+        <h6><i class="bi bi-pie-chart me-2" style="color:var(--primary)"></i>Documents by Category</h6>
+        <div style="height: 280px; position: relative;">
+            <canvas id="docCategoryChart"></canvas>
+            <div class="chart-empty" id="docCategoryEmpty" style="display:none;">
+                <i class="bi bi-folder2-open"></i>
+                <p>No documents uploaded yet</p>
+            </div>
+        </div>
+    </div>
+    <div class="chart-container">
+        <h6><i class="bi bi-shield-check me-2" style="color:var(--success)"></i>Documents by Expiry Status</h6>
+        <div style="height: 280px; position: relative;">
+            <canvas id="docStatusChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-container">
+        <h6><i class="bi bi-bar-chart me-2" style="color:#8b5cf6"></i>Loan Distribution by Type</h6>
+        <div style="height: 280px; position: relative;">
+            <canvas id="loanDistChart"></canvas>
+            <div class="chart-empty" id="loanDistEmpty" style="display:none;">
+                <i class="bi bi-bank"></i>
+                <p>No loans added yet</p>
+            </div>
+        </div>
+    </div>
+    <div class="chart-container">
+        <h6><i class="bi bi-graph-up me-2" style="color:var(--info)"></i>Monthly EMI Payments</h6>
+        <div style="height: 280px; position: relative;">
+            <canvas id="monthlyPaymentsChart"></canvas>
+            <div class="chart-empty" id="monthlyPaymentsEmpty" style="display:none;">
+                <i class="bi bi-calendar3"></i>
+                <p>No payment data yet</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Paid vs Pending Chart (centered) -->
+<div class="row mb-4 chart-row-single">
+    <div class="col-lg-5 col-md-6 mx-auto">
+        <div class="chart-container">
+            <h6><i class="bi bi-check2-square me-2" style="color:var(--success)"></i>Paid vs Pending EMIs</h6>
+            <div style="height: 260px; position: relative;">
+                <canvas id="paidPendingChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Dashboard Tables ═══ -->
+<div class="tables-grid">
+    <!-- Upcoming Document Expiries -->
+    <div class="content-card">
+        <div class="card-header">
+            <span><i class="bi bi-clock me-2" style="color:var(--warning)"></i>Upcoming Expiries</span>
+            <a href="{{ url_for('documents.expiry_reminders') }}" class="btn btn-sm btn-outline-primary">View All</a>
+        </div>
+        <div class="card-body p-0">
+            {% if upcoming_doc_expiries %}
+            <table class="table">
+                <thead><tr><th>Document</th><th>Expiry</th><th>Days Left</th><th>Status</th></tr></thead>
+                <tbody>
+                {% for doc in upcoming_doc_expiries %}
+                <tr>
+                    <td><a href="{{ url_for('documents.view_document', doc_id=doc.id) }}" class="text-decoration-none fw-600">{{ doc.title }}</a></td>
+                    <td>{{ doc.expiry_date.strftime('%d %b %Y') }}</td>
+                    <td>
+                        {% if doc.days_until_expiry is not none %}
+                            <span class="badge {{ 'bg-danger' if doc.days_until_expiry <= 7 else 'bg-warning text-dark' }}">{{ doc.days_until_expiry }}d</span>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td><span class="badge {{ doc.status_badge_class }}">{{ doc.status_display }}</span></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state"><i class="bi bi-check-circle text-success"></i><p>No documents expiring soon.</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Upcoming Loan Payments -->
+    <div class="content-card">
+        <div class="card-header">
+            <span><i class="bi bi-cash me-2" style="color:var(--primary)"></i>Upcoming Payments</span>
+            <a href="{{ url_for('emi.upcoming') }}" class="btn btn-sm btn-outline-primary">View All</a>
+        </div>
+        <div class="card-body p-0">
+            {% if upcoming_loan_payments %}
+            <table class="table">
+                <thead><tr><th>Loan</th><th>Amount</th><th>Due Date</th><th>Status</th></tr></thead>
+                <tbody>
+                {% for emi, loan in upcoming_loan_payments %}
+                <tr>
+                    <td><a href="{{ url_for('loans.view_loan', loan_id=loan.id) }}" class="text-decoration-none fw-600">{{ loan.loan_name }}</a></td>
+                    <td class="currency">₹{{ "{:,.2f}".format(emi.amount) }}</td>
+                    <td>{{ emi.due_date.strftime('%d %b %Y') }}</td>
+                    <td><span class="badge {{ emi.status_badge_class }}">{{ emi.status_display }}</span></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state"><i class="bi bi-check-circle text-success"></i><p>No upcoming payments.</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Overdue EMIs -->
+    <div class="content-card">
+        <div class="card-header">
+            <span><i class="bi bi-exclamation-triangle text-danger me-2"></i>Overdue EMIs</span>
+            <a href="{{ url_for('emi.overdue') }}" class="btn btn-sm btn-outline-danger">View All</a>
+        </div>
+        <div class="card-body p-0">
+            {% if overdue_emi_list %}
+            <table class="table">
+                <thead><tr><th>Loan</th><th>Amount</th><th>Due Date</th><th>Days Late</th></tr></thead>
+                <tbody>
+                {% for emi, loan in overdue_emi_list %}
+                <tr class="row-overdue">
+                    <td><a href="{{ url_for('loans.view_loan', loan_id=loan.id) }}" class="text-decoration-none fw-600 text-danger">{{ loan.loan_name }}</a></td>
+                    <td class="currency">₹{{ "{:,.2f}".format(emi.amount) }}</td>
+                    <td>{{ emi.due_date.strftime('%d %b %Y') }}</td>
+                    <td><span class="badge bg-danger">{{ (today - emi.due_date).days if today else '—' }}d</span></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state"><i class="bi bi-check-circle text-success"></i><p>No overdue EMIs! 🎉</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Expired Documents -->
+    {% if expired_doc_list %}
+    <div class="content-card">
+        <div class="card-header">
+            <span><i class="bi bi-file-earmark-x text-danger me-2"></i>Expired Documents</span>
+            <a href="{{ url_for('documents.expiry_reminders') }}" class="btn btn-sm btn-outline-danger">View All</a>
+        </div>
+        <div class="card-body p-0">
+            <table class="table">
+                <thead><tr><th>Document</th><th>Expired On</th><th>Category</th></tr></thead>
+                <tbody>
+                {% for doc in expired_doc_list %}
+                <tr class="row-expired">
+                    <td><a href="{{ url_for('documents.view_document', doc_id=doc.id) }}" class="text-decoration-none fw-600 text-danger">{{ doc.title }}</a></td>
+                    <td>{{ doc.expiry_date.strftime('%d %b %Y') }}</td>
+                    <td>{{ doc.category_display }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recently Uploaded -->
+    <div class="content-card">
+        <div class="card-header">
+            <span><i class="bi bi-cloud-arrow-up me-2" style="color:var(--info)"></i>Recent Uploads</span>
+            <a href="{{ url_for('documents.list_documents') }}" class="btn btn-sm btn-outline-primary">View All</a>
+        </div>
+        <div class="card-body p-0">
+            {% if recent_uploads %}
+            <table class="table">
+                <thead><tr><th>Document</th><th>Category</th><th>Uploaded</th></tr></thead>
+                <tbody>
+                {% for doc in recent_uploads %}
+                <tr>
+                    <td><a href="{{ url_for('documents.view_document', doc_id=doc.id) }}" class="text-decoration-none fw-600">{{ doc.title }}</a></td>
+                    <td><span class="badge bg-info">{{ doc.category_display }}</span></td>
+                    <td>{{ doc.uploaded_at.strftime('%d %b %Y') }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state"><i class="bi bi-cloud-arrow-up"></i><p>No documents uploaded yet.</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recent Payments -->
+    <div class="content-card">
+        <div class="card-header">
+            <span><i class="bi bi-receipt me-2" style="color:var(--success)"></i>Recent Payments</span>
+            <a href="{{ url_for('payments.payment_history') }}" class="btn btn-sm btn-outline-primary">View All</a>
+        </div>
+        <div class="card-body p-0">
+            {% if recent_payments %}
+            <table class="table">
+                <thead><tr><th>Loan</th><th>Amount</th><th>Paid On</th></tr></thead>
+                <tbody>
+                {% for emi, loan in recent_payments %}
+                <tr>
+                    <td>{{ loan.loan_name }}</td>
+                    <td class="currency text-success fw-600">₹{{ "{:,.2f}".format(emi.amount) }}</td>
+                    <td>{{ emi.payment_date.strftime('%d %b %Y') if emi.payment_date else '—' }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state"><i class="bi bi-receipt"></i><p>No recent payments.</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recent Notifications -->
+    <div class="content-card">
+        <div class="card-header">
+            <span><i class="bi bi-bell me-2" style="color:var(--primary)"></i>Recent Notifications</span>
+            <a href="{{ url_for('notifications.list_notifications') }}" class="btn btn-sm btn-outline-primary">View All</a>
+        </div>
+        <div class="card-body p-0 notif-timeline">
+            {% if recent_notifications %}
+            {% for notif in recent_notifications %}
+            <div class="notification-item {{ 'unread' if not notif.is_read }}">
+                <div class="notif-icon {% if 'expired' in notif.category or 'overdue' in notif.category %}bg-danger text-white{% elif 'due' in notif.category %}bg-warning{% else %}bg-info text-white{% endif %}">
+                    <i class="bi {% if 'doc' in notif.category %}bi-file-earmark-text{% elif 'emi' in notif.category %}bi-cash-stack{% else %}bi-bell{% endif %}"></i>
+                </div>
+                <div class="notif-content">
+                    <div class="notif-title">{{ notif.title }}</div>
+                    <div class="notif-message">{{ notif.message[:100] }}{% if notif.message|length > 100 %}...{% endif %}</div>
+                    <div class="notif-time"><i class="bi bi-clock me-1"></i>{{ notif.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="empty-state"><i class="bi bi-bell-slash"></i><p>No notifications yet.</p></div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+// Animated number counter
+document.addEventListener('DOMContentLoaded', function() {
+    const counters = document.querySelectorAll('.stat-value[data-count]');
+    counters.forEach(el => {
+        const target = parseInt(el.dataset.count, 10);
+        if (isNaN(target) || target === 0) return;
+        let current = 0;
+        const step = Math.max(1, Math.ceil(target / 30));
+        const timer = setInterval(() => {
+            current += step;
+            if (current >= target) {
+                current = target;
+                clearInterval(timer);
+            }
+            el.textContent = current.toLocaleString('en-IN');
+        }, 30);
+    });
+});
+</script>
+{% endblock %}

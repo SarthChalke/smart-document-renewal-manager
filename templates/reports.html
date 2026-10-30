@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Reports & Exports — Smart Document & Financial Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: #6C3BFF;">
+            <i class="bi bi-file-earmark-bar-graph-fill me-2" style="color: #2878FF;"></i> Reports & Exports Center
+        </h2>
+        <p class="text-muted small mb-0">Generate print-ready PDF reports and download CSV data for external analysis.</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- PDF Reports Card -->
+    <div class="col-lg-6">
+        <div class="card-clean p-4 h-100">
+            <h5 class="fw-bold mb-3" style="color: #FF6B6B;"><i class="bi bi-file-earmark-pdf me-2"></i> PDF Reports (Print Ready)</h5>
+            <p class="text-muted small mb-4">Formatted documents generated dynamically using ReportLab with tables, totals, and metadata.</p>
+
+            <div class="list-group list-group-flush mb-4">
+                <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                    <div>
+                        <h6 class="fw-bold mb-1">Loans Summary Report</h6>
+                        <small class="text-muted">Overview of all user loans, principal amounts, interest rates, repaid amounts, and outstanding balances.</small>
+                    </div>
+                    <a href="{{ url_for('report_loans_pdf') }}" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1">
+                        <i class="bi bi-download"></i> PDF
+                    </a>
+                </div>
+
+                <div class="list-group-item px-0 py-3">
+                    <h6 class="fw-bold mb-1">Individual Loan EMI Schedule PDF</h6>
+                    <small class="text-muted d-block mb-2">Select a loan to download its complete installment schedule with principal and interest components.</small>
+                    {% if loans %}
+                    <div class="d-flex gap-2">
+                        <select class="form-select form-select-sm" id="loanPdfSelect">
+                            {% for l in loans %}
+                            <option value="{{ l.id }}">{{ l.loan_name }} ({{ l.loan_id_code }})</option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="downloadSelectedLoanPdf()">
+                            <i class="bi bi-download"></i> Download
+                        </button>
+                    </div>
+                    {% else %}
+                    <span class="text-muted small">No loans available.</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CSV Exports Card -->
+    <div class="col-lg-6">
+        <div class="card-clean p-4 h-100">
+            <h5 class="fw-bold mb-3" style="color: #6C3BFF;"><i class="bi bi-file-earmark-spreadsheet me-2" style="color: #2878FF;"></i> CSV Data Exports</h5>
+            <p class="text-muted small mb-4">Export raw data into standard CSV files suitable for Microsoft Excel or Google Sheets.</p>
+
+            <div class="list-group list-group-flush mb-3">
+                <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                    <div>
+                        <h6 class="fw-bold mb-1">Documents Master List</h6>
+                        <small class="text-muted">All documents, categories, document numbers, authorities, holder names, and expiry dates.</small>
+                    </div>
+                    <a href="{{ url_for('report_documents_csv') }}" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" style="color: #6C3BFF; border-color: #6C3BFF;">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> CSV
+                    </a>
+                </div>
+
+                <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                    <div>
+                        <h6 class="fw-bold mb-1">Loans & Financial Balances</h6>
+                        <small class="text-muted">Principal amounts, monthly EMIs, repayment progress percentages, and current outstanding balances.</small>
+                    </div>
+                    <a href="{{ url_for('report_loans_csv') }}" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" style="color: #6C3BFF; border-color: #6C3BFF;">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> CSV
+                    </a>
+                </div>
+
+                <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                    <div>
+                        <h6 class="fw-bold mb-1">Payment Records Ledger</h6>
+                        <small class="text-muted">Every recorded transaction, amount, date, method, reference ID, and audit status.</small>
+                    </div>
+                    <a href="{{ url_for('report_payments_csv') }}" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" style="color: #6C3BFF; border-color: #6C3BFF;">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function downloadSelectedLoanPdf() {
+    const sel = document.getElementById('loanPdfSelect');
+    if (sel && sel.value) {
+        window.location.href = '/reports/loans/' + sel.value + '/schedule/pdf';
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}{{ doc.title }} — Document Details{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{{ url_for('documents_list') }}" class="btn btn-sm btn-light py-1 px-2"><i class="bi bi-arrow-left"></i> Back</a>
+            <h2 class="fw-bold mb-0" style="color: #6C3BFF;">{{ doc.title }}</h2>
+            <span class="{{ doc.status_badge_class }} ms-2">{{ doc.status_display }}</span>
+        </div>
+        <small class="text-muted">{{ doc.category_display }} · Uploaded on {{ doc.created_at.strftime('%d %b %Y, %I:%M %p') }}</small>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('renew_document', id=doc.id) }}" class="btn btn-purple d-flex align-items-center gap-1 shadow-sm">
+            <i class="bi bi-arrow-repeat"></i> Renew Document
+        </a>
+        <a href="{{ url_for('download_document', id=doc.id) }}" class="btn btn-primary-custom d-flex align-items-center gap-1 shadow-sm">
+            <i class="bi bi-download"></i> Download File
+        </a>
+        <form action="{{ url_for('delete_document', id=doc.id) }}" method="POST" class="d-inline" data-confirm="Are you sure you want to permanently delete this document and its history?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-danger">
+                <i class="bi bi-trash"></i>
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Left Column: Details & Edit Form -->
+    <div class="col-lg-6">
+        <div class="card-clean p-4 mb-4">
+            {% if edit_mode %}
+            <h5 class="fw-bold mb-3" style="color: #6C3BFF;"><i class="bi bi-pencil-square me-2"></i> Edit Document Details</h5>
+            <form method="POST" action="{{ url_for('edit_document', id=doc.id) }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Title</label>
+                    <input type="text" name="title" class="form-control" value="{{ doc.title }}" required>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Category</label>
+                        <select name="category" class="form-select">
+                            {% for cat_key, cat_name in categories %}
+                            <option value="{{ cat_key }}" {% if doc.category == cat_key %}selected{% endif %}>{{ cat_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Document Number</label>
+                        <input type="text" name="document_number" class="form-control" value="{{ doc.document_number or '' }}">
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Issuing Authority</label>
+                        <input type="text" name="issuing_authority" class="form-control" value="{{ doc.issuing_authority or '' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Holder Name</label>
+                        <input type="text" name="holder_name" class="form-control" value="{{ doc.holder_name or '' }}">
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Issue Date</label>
+                        <input type="date" name="issue_date" class="form-control" value="{{ doc.issue_date.strftime('%Y-%m-%d') if doc.issue_date else '' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Expiry Date</label>
+                        <input type="date" name="expiry_date" class="form-control" value="{{ doc.expiry_date.strftime('%Y-%m-%d') if doc.expiry_date else '' }}">
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Replace Document File (Optional)</label>
+                    <input type="file" name="document_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold">Notes</label>
+                    <textarea name="notes" class="form-control" rows="2">{{ doc.notes or '' }}</textarea>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-purple"><i class="bi bi-check-lg me-1"></i> Save Changes</button>
+                    <a href="{{ url_for('document_details', id=doc.id) }}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+
+            {% else %}
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0">Document Information</h5>
+                <a href="{{ url_for('edit_document', id=doc.id) }}" class="btn btn-sm btn-outline-secondary py-1 px-2">
+                    <i class="bi bi-pencil me-1"></i> Edit
+                </a>
+            </div>
+
+            <table class="table table-sm border-0 mb-0" style="font-size:0.9rem;">
+                <tbody>
+                    <tr>
+                        <td class="text-muted" style="width: 38%;">Category</td>
+                        <td class="fw-bold">{{ doc.category_display }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Document Number</td>
+                        <td class="fw-bold"><code>{{ doc.document_number or "Not specified" }}</code></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Holder / Owner Name</td>
+                        <td>{{ doc.holder_name or "Not specified" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Issuing Authority</td>
+                        <td>{{ doc.issuing_authority or "Not specified" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Issue Date</td>
+                        <td>{{ doc.issue_date.strftime('%d %b %Y') if doc.issue_date else "Not specified" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Expiry Date</td>
+                        <td>
+                            {% if doc.expiry_date %}
+                            <span class="{% if doc.expiry_status == 'expired' %}text-danger fw-bold{% elif doc.expiry_status == 'expiring_soon' %}text-warning fw-bold{% else %}fw-bold{% endif %}" style="{% if doc.expiry_status == 'valid' %}color: #6C3BFF;{% endif %}">
+                                {{ doc.expiry_date.strftime('%d %b %Y') }}
+                            </span>
+                            {% if doc.days_until_expiry is not none %}
+                            <span class="badge bg-light text-dark border ms-1">
+                                {% if doc.days_until_expiry < 0 %}{{ -doc.days_until_expiry }} days ago
+                                {% elif doc.days_until_expiry == 0 %}Today
+                                {% else %}{{ doc.days_until_expiry }} days left{% endif %}
+                            </span>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-muted">No Expiry (Lifetime)</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Renewal Status</td>
+                        <td><span class="badge bg-light text-dark border">{{ doc.renewal_status }}</span></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">File Size</td>
+                        <td>{{ (doc.file_size / 1024)|round(1) if doc.file_size else 0 }} KB</td>
+                    </tr>
+                    {% if doc.notes %}
+                    <tr>
+                        <td class="text-muted align-top">Notes</td>
+                        <td>{{ doc.notes }}</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+
+        <!-- Renewal History Section -->
+        <div class="card-clean p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-clock-history me-2 text-info"></i> Renewal History</h5>
+            {% if renewals %}
+            <div class="table-responsive">
+                <table class="table table-clean mb-0" style="font-size:0.85rem;">
+                    <thead>
+                        <tr>
+                            <th>Application Date</th>
+                            <th>Status</th>
+                            <th>Previous Expiry</th>
+                            <th>New Expiry</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in renewals %}
+                        <tr>
+                            <td>{{ r.application_date.strftime('%d %b %Y') }}</td>
+                            <td><span class="{{ r.status_badge_class }}">{{ r.status }}</span></td>
+                            <td>{{ r.previous_expiry_date.strftime('%d %b %Y') if r.previous_expiry_date else 'N/A' }}</td>
+                            <td class="fw-bold" style="color: #6C3BFF;">{{ r.new_expiry_date.strftime('%d %b %Y') if r.new_expiry_date else 'Pending' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted small mb-0">No past renewals on record for this document.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Right Column: Document Preview -->
+    <div class="col-lg-6">
+        <div class="card-clean p-3 h-100 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="fw-bold mb-0"><i class="bi bi-file-earmark-text me-1" style="color: #2878FF;"></i> File Preview</h6>
+                <a href="{{ url_for('preview_document', id=doc.id) }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-box-arrow-up-right me-1"></i> Open Full View
+                </a>
+            </div>
+
+            <div class="flex-grow-1 border rounded bg-light d-flex align-items-center justify-content-center overflow-hidden" style="min-height: 480px;">
+                {% if doc.mime_type == 'application/pdf' %}
+                <iframe src="{{ url_for('preview_document', id=doc.id) }}" style="width:100%; height:550px; border:none;"></iframe>
+                {% elif doc.mime_type and doc.mime_type.startswith('image/') %}
+                <img src="{{ url_for('preview_document', id=doc.id) }}" alt="{{ doc.title }}" class="img-fluid" style="max-height: 520px; object-fit: contain;">
+                {% else %}
+                <div class="text-center p-4">
+                    <i class="bi bi-file-earmark-binary fs-1 text-muted d-block mb-2"></i>
+                    <p class="text-muted mb-2">Preview not available for this file type.</p>
+                    <a href="{{ url_for('download_document', id=doc.id) }}" class="btn btn-sm btn-primary-custom">
+                        <i class="bi bi-download me-1"></i> Download File
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

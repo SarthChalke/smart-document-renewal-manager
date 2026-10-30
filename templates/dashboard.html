@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Smart Document & Financial Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: #6C3BFF;">
+            Welcome, {{ current_user.full_name }}
+        </h2>
+        <p class="text-muted small mb-0">Here is your live document validity status and loan financial management dashboard.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('scan_document') }}" class="btn btn-primary-custom d-flex align-items-center gap-2 shadow-sm">
+            <i class="bi bi-camera-fill"></i> Scan Document (OCR)
+        </a>
+        <a href="{{ url_for('add_loan') }}" class="btn btn-purple d-flex align-items-center gap-2 shadow-sm">
+            <i class="bi bi-plus-circle"></i> Add Loan
+        </a>
+        <a href="{{ url_for('emi_payments') }}" class="btn btn-pink d-flex align-items-center gap-2 shadow-sm">
+            <i class="bi bi-credit-card"></i> Pay EMI
+        </a>
+    </div>
+</div>
+
+<!-- ─── 1. METRIC CARDS ─── -->
+<h6 class="text-muted text-uppercase fw-bold mb-3" style="font-size:0.75rem; letter-spacing:0.06em;">
+    <i class="bi bi-folder-check me-1" style="color: #6C3BFF;"></i> Document Statistics
+</h6>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg">
+        <div class="stat-card">
+            <div class="stat-icon purple"><i class="bi bi-files"></i></div>
+            <div>
+                <h3 class="stat-value">{{ total_docs }}</h3>
+                <p class="stat-label">Total Docs</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="stat-card">
+            <div class="stat-icon cyan"><i class="bi bi-check-circle"></i></div>
+            <div>
+                <h3 class="stat-value" style="color: #0C7E8A;">{{ valid_docs }}</h3>
+                <p class="stat-label">Valid</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="stat-card">
+            <div class="stat-icon orange"><i class="bi bi-hourglass-split"></i></div>
+            <div>
+                <h3 class="stat-value text-warning">{{ expiring_soon_docs }}</h3>
+                <p class="stat-label">Expiring Soon</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="stat-card">
+            <div class="stat-icon coral"><i class="bi bi-exclamation-octagon"></i></div>
+            <div>
+                <h3 class="stat-value" style="color: #DC2626;">{{ expired_docs }}</h3>
+                <p class="stat-label">Expired</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="bi bi-arrow-repeat"></i></div>
+            <div>
+                <h3 class="stat-value" style="color: #2878FF;">{{ pending_renewals }}</h3>
+                <p class="stat-label">In Renewal</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h6 class="text-muted text-uppercase fw-bold mb-3" style="font-size:0.75rem; letter-spacing:0.06em;">
+    <i class="bi bi-bank2 me-1" style="color: #2878FF;"></i> Loan & EMI Financial Summary
+</h6>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg">
+        <div class="stat-card">
+            <div class="stat-icon purple"><i class="bi bi-bank2"></i></div>
+            <div>
+                <h3 class="stat-value">{{ total_active_loans }}</h3>
+                <p class="stat-label">Active Loans</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="bi bi-cash-stack"></i></div>
+            <div>
+                <h3 class="stat-value" style="font-size:1.25rem; color: #2878FF;">₹ {{ "{:,.0f}".format(total_loan_amount) }}</h3>
+                <p class="stat-label">Principal Amount</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="stat-card">
+            <div class="stat-icon cyan"><i class="bi bi-check2-all"></i></div>
+            <div>
+                <h3 class="stat-value" style="font-size:1.25rem; color: #0C7E8A;">₹ {{ "{:,.0f}".format(total_eligible_paid) }}</h3>
+                <p class="stat-label">Total Repaid</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="stat-card">
+            <div class="stat-icon orange"><i class="bi bi-pie-chart"></i></div>
+            <div>
+                <h3 class="stat-value text-warning" style="font-size:1.25rem;">₹ {{ "{:,.0f}".format(total_outstanding_principal) }}</h3>
+                <p class="stat-label">Est. Outstanding</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="stat-card">
+            <div class="stat-icon coral"><i class="bi bi-exclamation-triangle"></i></div>
+            <div>
+                <h3 class="stat-value {% if overdue_emis > 0 %}text-danger{% endif %}">{{ overdue_emis }}</h3>
+                <p class="stat-label">Overdue EMIs</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─── 2. CHARTS ROW ─── -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-3 col-md-6">
+        <div class="card-clean h-100">
+            <div class="card-header-clean">
+                <h5><i class="bi bi-pie-chart me-1" style="color: #22C7D6;"></i> Document Status</h5>
+            </div>
+            <div class="p-3 d-flex align-items-center justify-content-center" style="min-height: 240px;">
+                <canvas id="docOverviewChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6">
+        <div class="card-clean h-100">
+            <div class="card-header-clean">
+                <h5><i class="bi bi-pie-chart-fill me-1" style="color: #6C3BFF;"></i> Loan Distribution</h5>
+            </div>
+            <div class="p-3 d-flex align-items-center justify-content-center" style="min-height: 240px;">
+                <canvas id="loanStatusChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6">
+        <div class="card-clean h-100">
+            <div class="card-header-clean">
+                <h5><i class="bi bi-diagram-3-fill me-1" style="color: #F044A7;"></i> Principal vs Interest</h5>
+            </div>
+            <div class="p-3 d-flex align-items-center justify-content-center" style="min-height: 240px;">
+                <canvas id="principalVsInterestChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6">
+        <div class="card-clean h-100">
+            <div class="card-header-clean">
+                <h5><i class="bi bi-bar-chart-fill me-1" style="color: #2878FF;"></i> Monthly Payments</h5>
+            </div>
+            <div class="p-3" style="min-height: 240px;">
+                <canvas id="monthlyPaymentsChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─── 3. OVERDUE EMI ALERTS (if any) ─── -->
+{% if overdue_alerts %}
+<div class="card mb-4 shadow-sm" style="border-radius:12px; border: 1px solid #FF6B6B; overflow:hidden;">
+    <div class="card-header d-flex align-items-center justify-content-between py-2 px-3 text-white" style="background-color: #FF6B6B;">
+        <span class="fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i> Overdue Installment Alerts</span>
+        <span class="badge bg-white text-danger fw-bold">{{ overdue_alerts|length }} Overdue</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-clean mb-0">
+            <thead>
+                <tr>
+                    <th>Loan</th>
+                    <th>Installment</th>
+                    <th>Due Date</th>
+                    <th>Remaining (₹)</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in overdue_alerts %}
+                <tr>
+                    <td class="fw-bold text-danger">{{ item.loan.loan_name }}</td>
+                    <td>EMI #{{ item.installment_number }}</td>
+                    <td><span class="text-danger fw-bold">{{ item.due_date.strftime('%d %b %Y') }}</span></td>
+                    <td class="fw-bold">₹ {{ "{:,.2f}".format(item.remaining_amount) }}</td>
+                    <td>
+                        <a href="{{ url_for('pay_emi', id=item.id) }}" class="btn btn-sm btn-coral py-1 px-3 shadow-sm">
+                            <i class="bi bi-credit-card me-1"></i> Pay Now
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- ─── 4. REPAYMENT PROGRESS BARS ─── -->
+{% if user_loans %}
+<div class="card-clean mb-4">
+    <div class="card-header-clean">
+        <h5><i class="bi bi-speedometer2 me-2" style="color: #6C3BFF;"></i> Loan Repayment Progress</h5>
+        <a href="{{ url_for('loans_list') }}" class="btn btn-sm btn-outline-secondary">View All Loans</a>
+    </div>
+    <div class="p-3">
+        <div class="row g-3">
+            {% for loan in user_loans %}
+            <div class="col-md-6">
+                <div class="p-3 border rounded-3 bg-light">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold">{{ loan.loan_name }} <small class="text-muted">({{ loan.loan_id_code }})</small></span>
+                        <span class="badge {{ loan.status_badge_class }}">{{ loan.status_display }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between text-muted small mb-2">
+                        <span>Paid: <strong>₹ {{ "{:,.0f}".format(loan.total_eligible_paid) }}</strong></span>
+                        <span>Principal: <strong>₹ {{ "{:,.0f}".format(loan.principal_amount) }}</strong></span>
+                        <span class="fw-bold" style="color: #6C3BFF;">{{ loan.repayment_progress_percent }}%</span>
+                    </div>
+                    <div class="progress" style="height: 10px; border-radius: 5px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ loan.repayment_progress_percent }}%; background: linear-gradient(90deg, #6C3BFF, #2878FF);"></div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ─── 5. TWO COLUMNS: UPCOMING EXPIRIES & UPCOMING EMIs ─── -->
+<div class="row g-3 mb-4">
+    <!-- Upcoming Document Expiries -->
+    <div class="col-lg-6">
+        <div class="card-clean h-100">
+            <div class="card-header-clean">
+                <h5><i class="bi bi-clock-history text-warning me-2"></i> Upcoming Document Expiries</h5>
+                <a href="{{ url_for('documents_list') }}" class="btn btn-sm btn-link text-decoration-none" style="color: #6C3BFF;">View All</a>
+            </div>
+            <div class="p-0">
+                {% if upcoming_doc_expiries %}
+                <div class="table-responsive">
+                    <table class="table table-clean mb-0">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Category</th>
+                                <th>Expiry Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in upcoming_doc_expiries %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('document_details', id=doc.id) }}" class="fw-bold text-decoration-none text-dark">
+                                        {{ doc.title }}
+                                    </a>
+                                </td>
+                                <td><small class="text-muted">{{ doc.category_display }}</small></td>
+                                <td>{{ doc.expiry_date.strftime('%d %b %Y') }}</td>
+                                <td><span class="{{ doc.status_badge_class }}">{{ doc.status_display }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-check2-circle fs-3 d-block mb-1" style="color: #6C3BFF;"></i>
+                    No documents expiring in the next 30 days.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming EMI Installments -->
+    <div class="col-lg-6">
+        <div class="card-clean h-100">
+            <div class="card-header-clean">
+                <h5><i class="bi bi-calendar2-check me-2" style="color: #2878FF;"></i> Upcoming EMI Schedule</h5>
+                <a href="{{ url_for('emi_schedule') }}" class="btn btn-sm btn-link text-decoration-none" style="color: #6C3BFF;">View All</a>
+            </div>
+            <div class="p-0">
+                {% if upcoming_schedule %}
+                <div class="table-responsive">
+                    <table class="table table-clean mb-0">
+                        <thead>
+                            <tr>
+                                <th>Loan</th>
+                                <th>EMI #</th>
+                                <th>Due Date</th>
+                                <th>Amount</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for emi in upcoming_schedule %}
+                            <tr>
+                                <td class="fw-bold">{{ emi.loan.loan_name }}</td>
+                                <td>#{{ emi.installment_number }}</td>
+                                <td>{{ emi.due_date.strftime('%d %b %Y') }}</td>
+                                <td class="fw-bold">₹ {{ "{:,.2f}".format(emi.scheduled_amount) }}</td>
+                                <td>
+                                    <a href="{{ url_for('pay_emi', id=emi.id) }}" class="btn btn-sm btn-purple py-0 px-2">Pay</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-check2-circle fs-3 d-block mb-1" style="color: #6C3BFF;"></i>
+                    No scheduled upcoming installments due soon.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─── 6. RECENT PAYMENTS LEDGER ─── -->
+<div class="card-clean">
+    <div class="card-header-clean">
+        <h5><i class="bi bi-receipt me-2" style="color: #6C3BFF;"></i> Recent Payment Records</h5>
+        <a href="{{ url_for('payment_history') }}" class="btn btn-sm btn-outline-secondary">Full Ledger</a>
+    </div>
+    <div class="p-0">
+        {% if recent_payments %}
+        <div class="table-responsive">
+            <table class="table table-clean mb-0">
+                <thead>
+                    <tr>
+                        <th>Receipt No</th>
+                        <th>Loan Name</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Method</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in recent_payments %}
+                    <tr>
+                        <td class="fw-bold" style="color: #6C3BFF;">{{ p.receipt.receipt_number if p.receipt else p.payment_reference }}</td>
+                        <td>{{ p.loan.loan_name }}</td>
+                        <td class="fw-bold">₹ {{ "{:,.2f}".format(p.amount) }}</td>
+                        <td>{{ p.payment_date.strftime('%d %b %Y') }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ p.payment_method }}</span></td>
+                        <td><span class="{{ p.status_badge_class }}">{{ p.payment_status.title() }}</span></td>
+                        <td>
+                            {% if p.receipt %}
+                            <a href="{{ url_for('download_receipt_pdf', id=p.receipt.id) }}" class="btn btn-sm btn-outline-dark py-0 px-2" title="Download PDF Receipt">
+                                <i class="bi bi-file-earmark-pdf"></i> PDF
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-4 text-center text-muted">
+            No payments recorded yet. Use the "Pay EMI" or "Record Loan Payment" options to start tracking payments.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endblock %}

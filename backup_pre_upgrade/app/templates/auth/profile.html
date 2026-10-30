@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Profile - Smart Document Manager{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="content-card">
+            <div class="card-header"><i class="bi bi-person-circle me-2"></i>Profile Settings</div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.full_name.label(class="form-label") }}
+                        {{ form.full_name(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.email.label(class="form-label") }}
+                        {{ form.email(class="form-control") }}
+                        {% for error in form.email.errors %}<small class="text-danger">{{ error }}</small>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.phone.label(class="form-label") }}
+                        {{ form.phone(class="form-control") }}
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Update Profile</button>
+                    <a href="{{ url_for('auth.change_password') }}" class="btn btn-outline-secondary ms-2">Change Password</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

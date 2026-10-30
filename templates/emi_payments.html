@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Pay EMI — Smart Document & Financial Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: #6C3BFF;">
+            <i class="bi bi-credit-card-fill text-warning me-2"></i> EMI Payment Management
+        </h2>
+        <p class="text-muted small mb-0">Record full or partial installment payments, track balances, and download instant receipts.</p>
+    </div>
+    <a href="{{ url_for('emi_schedule') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-calendar2-week me-1"></i> Full EMI Schedule
+    </a>
+</div>
+
+<!-- Pay Form (if an EMI was selected) -->
+{% if selected_emi %}
+<div class="card-clean p-4 mb-4 shadow-sm" style="border: 2px solid #6C3BFF;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-dark mb-0">
+            <i class="bi bi-credit-card text-warning me-2"></i> Record EMI Payment: {{ selected_emi.loan.loan_name }} (EMI #{{ selected_emi.installment_number }})
+        </h5>
+        <a href="{{ url_for('emi_payments') }}" class="btn btn-sm btn-outline-secondary">Close</a>
+    </div>
+
+    <div class="alert alert-light border py-2 px-3 mb-3 d-flex flex-wrap gap-4 small">
+        <div><strong>Lender:</strong> {{ selected_emi.loan.lender_name }}</div>
+        <div><strong>Due Date:</strong> {{ selected_emi.due_date.strftime('%d %b %Y') }}</div>
+        <div><strong>Scheduled EMI:</strong> ₹ {{ "{:,.2f}".format(selected_emi.scheduled_amount) }}</div>
+        <div><strong>Already Paid:</strong> ₹ {{ "{:,.2f}".format(selected_emi.amount_paid) }}</div>
+        <div><strong>Remaining Due:</strong> <span class="text-danger fw-bold">₹ {{ "{:,.2f}".format(selected_emi.remaining_amount) }}</span></div>
+    </div>
+
+    <form method="POST" action="{{ url_for('pay_emi', id=selected_emi.id) }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <label class="form-label small fw-bold">Amount Being Paid (₹) <span class="text-danger">*</span></label>
+                <input type="number" step="0.01" name="amount" class="form-control form-control-lg fw-bold" style="color: #6C3BFF;"
+                       value="{{ selected_emi.remaining_amount }}" max="{{ selected_emi.remaining_amount }}" min="1" required>
+                <small class="text-muted">Enter full amount or lesser amount for a partial payment.</small>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-bold">Payment Date <span class="text-danger">*</span></label>
+                <input type="date" name="payment_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-bold">Payment Method <span class="text-danger">*</span></label>
+                <select name="payment_method" class="form-select" required>
+                    {% for m_val, m_label in payment_methods %}
+                    <option value="{{ m_val }}" {% if m_val == 'UPI' %}selected{% endif %}>{{ m_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label class="form-label small fw-bold">Transaction / UTR Reference ID</label>
+                <input type="text" name="transaction_reference" class="form-control" placeholder="e.g. UPI/3456789012 or NEFT ref">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small fw-bold">Upload Payment Receipt Proof (Optional)</label>
+                <input type="file" name="receipt_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label small fw-bold">Notes</label>
+            <input type="text" name="notes" class="form-control" placeholder="Optional payment remarks...">
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-purple px-4 fw-bold">
+                <i class="bi bi-check-circle me-1"></i> Confirm & Record Payment
+            </button>
+            <a href="{{ url_for('emi_payments') }}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<!-- Unpaid & Upcoming Installments Table -->
+<div class="card-clean">
+    <div class="card-header-clean">
+        <h5>Unpaid & Due Installments ({{ emis|length }})</h5>
+        <span class="text-muted small">Click "Pay EMI" to record full or partial payment</span>
+    </div>
+
+    <div class="p-0">
+        {% if emis %}
+        <div class="table-responsive">
+            <table class="table table-clean mb-0">
+                <thead>
+                    <tr>
+                        <th>Loan Name</th>
+                        <th>#</th>
+                        <th>Due Date</th>
+                        <th>Scheduled EMI</th>
+                        <th>Already Paid</th>
+                        <th>Remaining Due</th>
+                        <th>Status</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for emi in emis %}
+                    <tr>
+                        <td>
+                            <strong class="d-block">{{ emi.loan.loan_name }}</strong>
+                            <small class="text-muted">{{ emi.loan.lender_name }} · <code>{{ emi.loan.loan_id_code }}</code></small>
+                        </td>
+                        <td><strong>#{{ emi.installment_number }}</strong></td>
+                        <td>
+                            <span class="{% if item_status == 'overdue' %}text-danger fw-bold{% elif emi.status == 'due_today' %}text-warning fw-bold{% endif %}">
+                                {{ emi.due_date.strftime('%d %b %Y') }}
+                            </span>
+                        </td>
+                        <td class="fw-bold">₹ {{ "{:,.2f}".format(emi.scheduled_amount) }}</td>
+                        <td>₹ {{ "{:,.2f}".format(emi.amount_paid) }}</td>
+                        <td class="fw-bold text-danger">₹ {{ "{:,.2f}".format(emi.remaining_amount) }}</td>
+                        <td><span class="{{ emi.status_badge_class }}">{{ emi.status_display }}</span></td>
+                        <td class="text-end">
+                            <a href="{{ url_for('pay_emi', id=emi.id) }}" class="btn btn-pink py-1 px-3 fw-bold">
+                                <i class="bi bi-credit-card me-1"></i> Pay EMI
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-5 text-center text-muted">
+            <i class="bi bi-check2-circle fs-1 d-block mb-2" style="color: #6C3BFF;"></i>
+            <h5>All clear! No pending or overdue EMIs</h5>
+            <p class="small">All your scheduled installments are paid up to date.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

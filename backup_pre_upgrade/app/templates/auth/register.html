@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Register - Smart Document Manager{% endblock %}
+{% block auth_content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <h2><i class="bi bi-shield-check text-primary"></i></h2>
+        <h2>Create Account</h2>
+        <p class="auth-subtitle">Register to manage your documents & finances</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert" style="font-size:0.85rem;">
+            {{ message }}
+            <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('auth.register') }}">
+            {{ form.hidden_tag() }}
+            <div class="mb-3">
+                {{ form.full_name.label(class="form-label") }}
+                {{ form.full_name(class="form-control", placeholder="Enter your full name") }}
+                {% for error in form.full_name.errors %}<small class="text-danger">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="mb-3">
+                {{ form.username.label(class="form-label") }}
+                {{ form.username(class="form-control", placeholder="Choose a username") }}
+                {% for error in form.username.errors %}<small class="text-danger">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="mb-3">
+                {{ form.email.label(class="form-label") }}
+                {{ form.email(class="form-control", placeholder="Enter email address") }}
+                {% for error in form.email.errors %}<small class="text-danger">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="mb-3">
+                {{ form.phone.label(class="form-label") }}
+                {{ form.phone(class="form-control", placeholder="Phone number (optional)") }}
+            </div>
+            <div class="mb-3">
+                {{ form.password.label(class="form-label") }}
+                {{ form.password(class="form-control", placeholder="Create a password (min 6 chars)") }}
+                {% for error in form.password.errors %}<small class="text-danger">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="mb-3">
+                {{ form.confirm_password.label(class="form-label") }}
+                {{ form.confirm_password(class="form-control", placeholder="Confirm your password") }}
+                {% for error in form.confirm_password.errors %}<small class="text-danger">{{ error }}</small>{% endfor %}
+            </div>
+            <button type="submit" class="btn btn-primary w-100 mb-3">
+                <i class="bi bi-person-plus me-1"></i> Create Account
+            </button>
+        </form>
+        <p class="text-center mb-0" style="font-size:0.85rem; color: var(--text-muted);">
+            Already have an account? <a href="{{ url_for('auth.login') }}" class="text-decoration-none fw-600">Sign in</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Loan Payments — Smart Document & Financial Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: #6C3BFF;">
+            <i class="bi bi-wallet2 me-2" style="color: #2878FF;"></i> Loan Payment Management
+        </h2>
+        <p class="text-muted small mb-0">Record general loan payments, lump-sum repayments, and view payment receipts.</p>
+    </div>
+    <button class="btn btn-purple d-flex align-items-center gap-1 shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#recordPaymentCard">
+        <i class="bi bi-plus-circle"></i> Record Loan Payment
+    </button>
+</div>
+
+<!-- ─── RECORD PAYMENT FORM (Collapsible) ─── -->
+<div class="collapse mb-4" id="recordPaymentCard">
+    <div class="card-clean p-4" style="border: 2px solid #6C3BFF;">
+        <h5 class="fw-bold mb-3" style="color: #6C3BFF;"><i class="bi bi-wallet2 me-2"></i> Record Loan Payment</h5>
+        <form method="POST" action="{{ url_for('record_general_payment') }}" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold">Select Loan <span class="text-danger">*</span></label>
+                    <select name="loan_id" class="form-select" required>
+                        <option value="">Choose a loan...</option>
+                        {% for l in loans %}
+                        <option value="{{ l.id }}">{{ l.loan_name }} ({{ l.lender_name }} - {{ l.loan_id_code }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Payment Amount (₹) <span class="text-danger">*</span></label>
+                    <input type="number" step="0.01" name="amount" class="form-control" placeholder="5000" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Payment Date <span class="text-danger">*</span></label>
+                    <input type="date" name="payment_date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}" required>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Payment Method <span class="text-danger">*</span></label>
+                    <select name="payment_method" class="form-select" required>
+                        {% for m_val, m_label in payment_methods %}
+                        <option value="{{ m_val }}">{{ m_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Transaction / UTR Reference ID</label>
+                    <input type="text" name="transaction_reference" class="form-control" placeholder="e.g. UPI/1234567890">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Upload Receipt / Proof (Optional)</label>
+                    <input type="file" name="receipt_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label small fw-bold">Notes</label>
+                <textarea name="notes" class="form-control" rows="2" placeholder="Optional notes..."></textarea>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-purple px-4"><i class="bi bi-check-lg me-1"></i> Confirm & Record Payment</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#recordPaymentCard">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Payments Ledger -->
+<div class="card-clean">
+    <div class="card-header-clean">
+        <h5>All Recorded Loan Payments ({{ payments|length }})</h5>
+        <a href="{{ url_for('report_payments_csv') }}" class="btn btn-sm btn-outline-primary" style="color: #6C3BFF; border-color: #6C3BFF;">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Payments CSV
+        </a>
+    </div>
+
+    <div class="p-0">
+        {% if payments %}
+        <div class="table-responsive">
+            <table class="table table-clean mb-0">
+                <thead>
+                    <tr>
+                        <th>Receipt #</th>
+                        <th>Loan Name</th>
+                        <th>Lender</th>
+                        <th>Amount Paid</th>
+                        <th>Date</th>
+                        <th>Method</th>
+                        <th>Reference ID</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in payments %}
+                    <tr>
+                        <td>
+                            {% if p.receipt %}
+                            <a href="{{ url_for('view_receipt', id=p.receipt.id) }}" class="fw-bold text-decoration-none" style="color: #6C3BFF;">
+                                {{ p.receipt.receipt_number }}
+                            </a>
+                            {% else %}
+                            <code>{{ p.payment_reference }}</code>
+                            {% endif %}
+                        </td>
+                        <td>{{ p.loan.loan_name }}</td>
+                        <td>{{ p.loan.lender_name }}</td>
+                        <td class="fw-bold" style="color: #6C3BFF;">₹ {{ "{:,.2f}".format(p.amount) }}</td>
+                        <td>{{ p.payment_date.strftime('%d %b %Y') }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ p.payment_method }}</span></td>
+                        <td><code>{{ p.transaction_reference or "—" }}</code></td>
+                        <td><span class="{{ p.status_badge_class }}">{{ p.payment_status.title() }}</span></td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                {% if p.receipt %}
+                                <a href="{{ url_for('download_receipt_pdf', id=p.receipt.id) }}" class="btn btn-light" title="Download PDF Receipt">
+                                    <i class="bi bi-file-earmark-pdf"></i>
+                                </a>
+                                {% endif %}
+                                {% if p.payment_status == 'completed' %}
+                                <form action="{{ url_for('cancel_payment', id=p.id) }}" method="POST" class="d-inline" data-confirm="Cancel this payment record? This will reverse the balance reduction.">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="reason" value="User cancelled from loan payments page">
+                                    <button type="submit" class="btn btn-light text-warning" title="Cancel Payment">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-5 text-center text-muted">
+            <i class="bi bi-wallet2 fs-1 text-muted d-block mb-2"></i>
+            <h5>No loan payments recorded yet</h5>
+            <p class="small">Click "Record Loan Payment" above to register completed payments.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

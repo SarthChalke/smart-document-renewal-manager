@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications — Smart Document & Financial Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: #6C3BFF;">
+            <i class="bi bi-bell-fill me-2" style="color: #2878FF;"></i> Notifications & Alerts
+        </h2>
+        <p class="text-muted small mb-0">Stay informed about upcoming document expiries, due EMIs, and payment records.</p>
+    </div>
+    {% if notifications %}
+    <form action="{{ url_for('mark_all_notifications_read') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-check2-all me-1"></i> Mark All as Read
+        </button>
+    </form>
+    {% endif %}
+</div>
+
+<!-- Filters Bar -->
+<div class="card-clean p-3 mb-4">
+    <form method="GET" action="{{ url_for('notifications') }}" class="row g-2 align-items-center">
+        <div class="col-md-5">
+            <select name="category" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">All Categories</option>
+                <option value="doc_expiring" {% if current_category == 'doc_expiring' %}selected{% endif %}>Document Expiring Soon</option>
+                <option value="doc_expired" {% if current_category == 'doc_expired' %}selected{% endif %}>Document Expired</option>
+                <option value="emi_due" {% if current_category == 'emi_due' %}selected{% endif %}>EMI Due Reminder</option>
+                <option value="emi_overdue" {% if current_category == 'emi_overdue' %}selected{% endif %}>EMI Overdue Alert</option>
+                <option value="payment_recorded" {% if current_category == 'payment_recorded' %}selected{% endif %}>Payment Recorded</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <div class="form-check pt-1">
+                <input class="form-check-input" type="checkbox" name="unread" value="1" id="unreadCheck" {% if unread_only %}checked{% endif %} onchange="this.form.submit()">
+                <label class="form-check-label small fw-bold" for="unreadCheck">Show unread only</label>
+            </div>
+        </div>
+        <div class="col-md-3 text-end">
+            <a href="{{ url_for('notifications') }}" class="btn btn-sm btn-outline-secondary">Reset Filters</a>
+        </div>
+    </form>
+</div>
+
+<!-- Notifications List -->
+<div class="card-clean">
+    <div class="p-0">
+        {% if notifications %}
+        <div class="list-group list-group-flush">
+            {% for n in notifications %}
+            <div class="list-group-item d-flex align-items-start justify-content-between p-3 {% if not n.is_read %}bg-light{% endif %}" style="{% if not n.is_read %}border-left: 4px solid #6C3BFF !important;{% endif %}">
+                <div class="d-flex align-items-start gap-3">
+                    <i class="bi {{ n.icon_class }} fs-4 mt-1"></i>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h6 class="fw-bold mb-0 {% if not n.is_read %}text-dark{% else %}text-muted{% endif %}">{{ n.title }}</h6>
+                            {% if not n.is_read %}
+                            <span class="badge rounded-pill" style="font-size:0.65rem; background: #6C3BFF; color: #FFFFFF;">New</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-muted small mb-1">{{ n.message }}</p>
+                        <small class="text-muted" style="font-size:0.75rem;">
+                            <i class="bi bi-clock me-1"></i> {{ n.created_at.strftime('%d %b %Y, %I:%M %p') }}
+                        </small>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-1 align-items-center">
+                    {% if not n.is_read %}
+                    <form action="{{ url_for('mark_notification_read', id=n.id) }}" method="POST" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-light py-1 px-2" title="Mark as Read">
+                            <i class="bi bi-check2"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                    <form action="{{ url_for('delete_notification', id=n.id) }}" method="POST" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-light text-danger py-1 px-2" title="Dismiss">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-5 text-center text-muted">
+            <i class="bi bi-bell-slash fs-1 text-muted d-block mb-2"></i>
+            <h5>No notifications</h5>
+            <p class="small">You're all caught up! New document expiry and EMI due reminders will appear here automatically.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
