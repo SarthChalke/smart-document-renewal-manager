@@ -1,0 +1,221 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Apply for Certificate | Smart Document Manager{% endblock %}
+
+{% block extra_css %}
+<style>
+    .apply-container {
+        max-width: 800px;
+    }
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+        padding: 0 10px;
+    }
+    .step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+    }
+    .step::before {
+        content: '';
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #e9ecef;
+        margin: 0 auto 10px;
+        border: 3px solid #e9ecef;
+    }
+    .step.active::before {
+        background: #6C3BFF;
+        border-color: #6C3BFF;
+    }
+    .step .label {
+        font-size: 12px;
+        color: #6c757d;
+    }
+    .step.active .label {
+        color: #6C3BFF;
+        font-weight: 600;
+    }
+    .step::after {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        right: -50%;
+        height: 2px;
+        background: #e9ecef;
+        z-index: -1;
+    }
+    .step:first-child::after {
+        display: none;
+    }
+
+    .form-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        padding: 32px;
+        transition: transform 0.3s ease;
+    }
+    .form-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .card-header-section {
+        background: linear-gradient(90deg, #6C3BFF 0%, #8a5cf5 100%);
+        color: white;
+        padding: 24px;
+        margin: -32px -32px 24px -32px;
+        border-radius: 16px 16px 0 0;
+    }
+
+    .form-label {
+        font-weight: 500;
+        color: #495057;
+        margin-bottom: 6px;
+    }
+
+    .btn-primary-glow {
+        background: linear-gradient(90deg, #6C3BFF 0%, #8a5cf5 100%);
+        border: none;
+        padding: 10px 24px;
+        font-weight: 500;
+        transition: opacity 0.3s ease;
+    }
+    .btn-primary-glow:hover {
+        opacity: 0.9;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid apply-container py-4">
+    <!-- Step Indicator -->
+    <div class="step-indicator">
+        <div class="step active">
+            <span class="bi bi-1"></span>
+            <div class="label">Certificate Type</div>
+        </div>
+        <div class="step">
+            <span class="bi bi-2"></span>
+            <div class="label">Details</div>
+        </div>
+        <div class="step">
+            <span class="bi bi-3"></span>
+            <div class="label">Review & Create</div>
+        </div>
+    </div>
+
+    <div class="form-card animate__animated animate__fadeInUp">
+        <div class="card-header-section">
+            <h4 class="mb-0">
+                <i class="bi bi-file-earmark-text me-2"></i>
+                Create Certificate Application
+            </h4>
+        </div>
+
+        <form method="POST" action="{{ url_for('government.apply_for_certificate') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <label class="form-label" for="certificate_type_id">Certificate Type *</label>
+                    <select class="form-select" id="certificate_type_id" name="certificate_type_id" required>
+                        <option value="">Select a certificate...</option>
+                        {% for cert in certificate_types %}
+                        <option value="{{ cert.id }}" data-portal="{{ cert.portal_url }}">
+                            {{ cert.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text">Processing time: 7-30 days</div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label" for="applicant_name">Applicant Name *</label>
+                    <input type="text" class="form-control" id="applicant_name" name="applicant_name"
+                           value="{{ current_user.full_name }}" required>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <label class="form-label" for="district">District *</label>
+                    <input type="text" class="form-control" id="district" name="district"
+                           placeholder="e.g., Raigad, Pune, Mumbai..." required>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label" for="application_date">Application Date</label>
+                    <input type="date" class="form-control" id="application_date" name="application_date">
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <label class="form-label" for="expected_completion_date">Expected Completion Date</label>
+                    <input type="date" class="form-control" id="expected_completion_date" name="expected_completion_date">
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label" for="notes">Reference Number</label>
+                    <input type="text" class="form-control" id="notes" name="notes" maxlength="100"
+                           placeholder="Your application reference (optional)">
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label" for="notes">Additional Notes</label>
+                <textarea class="form-control" id="notes" name="notes" rows="3"
+                          placeholder="Any additional details about your application..." maxlength="4000"></textarea>
+            </div>
+
+            <div class="alert alert-warning">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                Saving a draft does not submit your application to the government.
+                You will need to apply through the official portal separately.
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('government.government_services') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i> Cancel
+                </a>
+
+                <button type="submit" class="btn btn-primary-glow">
+                    <i class="bi bi-save me-2"></i>Create Application
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Official Portal CTA -->
+    <div class="card mt-4 border-0 shadow-sm">
+        <div class="card-body text-center p-4">
+            <h5 class="mb-3">Ready to Apply on Official Portal?</h5>
+            <p class="text-muted mb-0">
+                Once you have your local record, you can proceed with the actual application through the official portal.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Portal URL will be populated on selection
+    const select = document.getElementById('certificate_type_id');
+    if (select) {
+        select.addEventListener('change', function() {
+            const selected = this.options[this.options.selectedIndex];
+            const portal = selected.getAttribute('data-portal');
+            if (portal) {
+                // In a real app, you'd update a portal link here
+                console.log('Selected portal:', portal);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

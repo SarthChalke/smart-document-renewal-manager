@@ -1,0 +1,276 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Dashboard | Smart Document Manager{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+        border: none;
+        border-radius: 16px;
+        padding: 24px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 16px;
+        margin-bottom: 16px;
+        font-size: 24px;
+    }
+    .stat-card .stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1a1a1a;
+    }
+    .stat-card .stat-label {
+        color: #6c757d;
+        font-size: 14px;
+        font-weight: 500;
+    }
+    .card-document { border-top: 4px solid #6C3BFF; }
+    .card-loan { border-top: 4px solid #28a745; }
+    .card-emi { border-top: 4px solid #17a2b8; }
+    .card-alert { border-top: 4px solid #dc3545; }
+
+    .timeline-item {
+        position: relative;
+        padding-left: 30px;
+        margin-bottom: 20px;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 10px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #6C3BFF;
+    }
+
+    .status-badge {
+        font-size: 12px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Hero Section -->
+    <section class="hero-section mb-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4 p-md-5">
+                <h1 class="card-title mb-2">Welcome back, {{ current_user.full_name }}!</h1>
+                <p class="card-text text-muted mb-0">Here's what's happening with your financial documents today.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Statistics Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card document-card h-100">
+                <div class="card-body">
+                    <div class="stat-icon bg-light">
+                        <i class="bi bi-card-text text-primary"></i>
+                    </div>
+                    <div class="stat-value">{{ total_docs }}</div>
+                    <div class="stat-label">Total Documents</div>
+                    <div class="mt-2">
+                        <span class="status-badge bg-success text-white">{{ valid_docs }} Valid</span>
+                        <span class="status-badge bg-warning text-dark ms-2">{{ expiring_soon_docs }} Expiring</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card stat-card loan-card h-100">
+                <div class="card-body">
+                    <div class="stat-icon bg-light">
+                        <i class="bi bi-currency-bitcoin text-success"></i>
+                    </div>
+                    <div class="stat-value">₹{{ "%.0f"|format(total_loan_amount) if total_loan_amount else 0 }}</div>
+                    <div class="stat-label">Total Loan Amount</div>
+                    <div class="mt-2">
+                        <span class="status-badge bg-info text-dark">{{ total_active_loans }} Active</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card stat-card emi-card h-100">
+                <div class="card-body">
+                    <div class="stat-icon bg-light">
+                        <i class="bi bi-calculator text-primary"></i>
+                    </div>
+                    <div class="stat-value">₹{{ "%.0f"|format(total_monthly_emi) if total_monthly_emi else 0 }}</div>
+                    <div class="stat-label">Monthly EMI</div>
+                    <div class="mt-2">
+                        <span class="status-badge bg-danger text-white">{{ overdue_emis }} Overdue</span>
+                        <span class="status-badge bg-warning text-dark ms-2">{{ emis_due_today }} Due Today</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card stat-card alert-card h-100">
+                <div class="card-body">
+                    <div class="stat-icon bg-light">
+                        <i class="bi bi-bell text-warning"></i>
+                    </div>
+                    <div class="stat-value">{{ overdue_emis + emis_due_today }}</div>
+                    <div class="stat-label">EMI Alerts</div>
+                    <div class="mt-2">
+                        <span class="status-badge bg-danger text-white">{{ expired_docs }} Expired Docs</span>
+                        <span class="status-badge bg-warning text-dark ms-2">{{ pending_renewals }} Renewals</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <!-- Upcoming Documents Expiring -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white border-0 pb-0">
+                    <h5 class="card-title mb-0">Upcoming Document Expiries</h5>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_doc_expiries %}
+                    <div class="list-group">
+                        {% for doc in upcoming_doc_expiries %}
+                        <div class="list-group-item border-0">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">{{ doc.title }}</h6>
+                                    <small class="text-muted">{{ doc.category_display }}</small>
+                                </div>
+                                <span class="badge {% if doc.expiry_status == 'valid' %}bg-success{% elif doc.expiry_status == 'expiring_soon' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                    {{ doc.expiry_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted py-4 text-center">No documents expiring soon</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Upcoming EMI Schedule -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white border-0 pb-0">
+                    <h5 class="card-title mb-0">Upcoming EMI Payments</h5>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_schedule %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Loan ID</th>
+                                    <th>Due Date</th>
+                                    <th>Principal</th>
+                                    <th>Interest</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for emi in upcoming_schedule %}
+                                <tr>
+                                    <td>#{{ emi.loan_id }}</td>
+                                    <td>{{ emi.due_date.strftime('%d %b %Y') }}</td>
+                                    <td>₹{{ "%.2f"|format(emi.principal_component) }}</td>
+                                    <td>₹{{ "%.2f"|format(emi.interest_component) }}</td>
+                                    <td class="fw-medium">₹{{ "%.2f"|format(emi.total_component) }}</td>
+                                    <td>
+                                        <span class="badge {% if emi.status == 'paid' %}bg-success{% elif emi.status == 'overdue' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                            {{ emi.status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted py-4 text-center">No upcoming EMI payments</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white border-0 pb-0">
+                    <h5 class="card-title mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('documents.add_document') }}" class="btn btn-outline-primary d-flex align-items-center justify-content-center gap-2">
+                            <i class="bi bi-cloud-arrow-up-fill"></i>
+                            Add Document
+                        </a>
+                        <a href="{{ url_for('emi.calculator') }}" class="btn btn-outline-success d-flex align-items-center justify-content-center gap-2">
+                            <i class="bi bi-calculator-fill"></i>
+                            EMI Calculator
+                        </a>
+                        <a href="{{ url_for('government.government_services') }}" class="btn btn-outline-info d-flex align-items-center justify-content-center gap-2">
+                            <i class="bi bi-boundaries"></i>
+                            Government Docs
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Payments -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-0 pb-0">
+                    <h5 class="card-title mb-0">Recent Payments</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_payments %}
+                    <div class="list-group">
+                        {% for payment in recent_payments %}
+                        <div class="list-group-item border-0">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">Payment #{{ payment.receipt_number or payment.id }}</h6>
+                                    <small class="text-muted">₹{{ "%.2f"|format(payment.amount) }}</small>
+                                </div>
+                                <span class="badge {% if payment.payment_status == 'completed' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                    {{ payment.payment_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted py-4 text-center">No recent payments</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
