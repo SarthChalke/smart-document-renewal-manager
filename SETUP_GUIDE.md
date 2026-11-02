@@ -233,19 +233,21 @@ document1/
 
 ### "module not found" errors
 ```bash
-pip install -r requirements.txt
+pip install --user Flask Flask-SQLAlchemy Flask-Login Flask-WTF WTForms Werkzeug
+pip install --user python-dotenv Pillow pytesseract opencv-python-headless
+pip install --user pypdf reportlab psycopg2-binary python-dateutil
 ```
 
 ### Database errors
 ```bash
 # Remove and recreate database
-rm instance/app.db
-python -c "from app import create_app; from app.models import db; app = create_app(); app.app_context().push(); db.create_all()"
+del instance\app.db REM # or rm instance/app.db on Linux
+python -c "from app import create_app; from app.models import db; app = create_app(); app.app_context().push(); db.create_all(); print('Database created!')"
 ```
 
 ### Tesseract OCR not found
 1. Install Tesseract from https://github.com/UB-Mannheim/tesseract/wiki
-2. Update `TESSERACT_CMD` in `.env`
+2. Update `TESSERACT_CMD` in `.env` (optional - OCR features will be disabled if not installed)
 
 ### "No module named 'dateutil'"
 ```bash

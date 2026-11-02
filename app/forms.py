@@ -58,6 +58,18 @@ class DocumentEditForm(FlaskForm):
     """Document edit form."""
     title = StringField('Title', validators=[DataRequired(), Length(max=200)])
     category = SelectField('Category', validators=[DataRequired()], choices=[])
+
+
+class DocumentOCRForm(FlaskForm):
+    """Document OCR scan form."""
+    title = StringField('Title', validators=[DataRequired(), Length(max=200)])
+    category = SelectField('Category', validators=[DataRequired()], choices=[])
+    document_number = StringField('Document Number', validators=[Optional(), Length(max=100)])
+    issuing_authority = StringField('Issuing Authority', validators=[Optional(), Length(max=150)])
+    holder_name = StringField('Holder Name', validators=[Optional(), Length(max=150)])
+    issue_date = DateField('Issue Date', format='%Y-%m-%d', validators=[Optional()])
+    expiry_date = DateField('Expiry Date', format='%Y-%m-%d', validators=[Optional()])
+    notes = TextAreaField('Notes', validators=[Optional(), Length(max=4000)])
     document_number = StringField('Document Number', validators=[Optional(), Length(max=100)])
     issuing_authority = StringField('Issuing Authority', validators=[Optional(), Length(max=150)])
     holder_name = StringField('Holder Name', validators=[Optional(), Length(max=150)])

@@ -383,6 +383,9 @@ class UserReminderPreference(db.Model):
     in_app_enabled = db.Column(db.Boolean, nullable=False, default=True)
     email_enabled = db.Column(db.Boolean, nullable=False, default=False)
 
+    # Legacy fields for backward compatibility
+    reminder_type = db.Column(db.String(50), nullable=True)
+
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 

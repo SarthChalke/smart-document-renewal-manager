@@ -26,20 +26,14 @@ def register():
         db.session.commit()
 
         # Create default reminder preferences
-        doc_pref = UserReminderPreference(
+        pref = UserReminderPreference(
             user_id=user.id,
-            reminder_type='document',
-            days_before='30,14,7,1',
-            in_app_enabled=True
+            doc_days_before='30,14,7,1',
+            emi_days_before='7,3,1,0',
+            in_app_enabled=True,
+            email_enabled=False
         )
-        emi_pref = UserReminderPreference(
-            user_id=user.id,
-            reminder_type='emi',
-            days_before='7,3,1,0',
-            in_app_enabled=True
-        )
-        db.session.add(doc_pref)
-        db.session.add(emi_pref)
+        db.session.add(pref)
         db.session.commit()
 
         flash('Account created successfully! Please login.', 'success')
@@ -99,7 +93,7 @@ def profile():
     return render_template('auth/profile.html', form=form)
 
 
-@auth.route('/change-password', methods=['GET', 'POST'])
+@auth_bp.route('/change-password', methods=['GET', 'POST'])
 @login_required
 def change_password():
     form = ChangePasswordForm()

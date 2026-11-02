@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from datetime import date, datetime, timedelta
 from sqlalchemy import func, and_
 from app import db
-from app.models import Document, Loan, Notification, EMISchedule
+from app.models import Document, DocumentRenewal, Loan, LoanPayment, Notification, EMISchedule
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
